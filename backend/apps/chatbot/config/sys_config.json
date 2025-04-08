@@ -1,0 +1,46 @@
+{
+  "characterConfig": {
+    "character": 2,
+    "character_name": "爱莉",
+    "yourName": "用户"
+  },
+  "languageModelConfig": {
+    "openai": {
+      "OPENAI_API_KEY": "sk-",
+      "OPENAI_BASE_URL": ""
+    },
+    "ollama": {
+      "OLLAMA_API_BASE": "http://localhost:11434",
+      "OLLAMA_API_MODEL_NAME": "qwen:7b"
+    },
+    "zhipuai": {
+      "ZHIPUAI_API_KEY": "SK-"
+    }
+  },
+  "enableProxy": false,
+  "httpProxy": "http://host.docker.internal:23457",
+  "httpsProxy": "https://host.docker.internal:23457",
+  "socks5Proxy": "socks5://host.docker.internal:23457",
+  "conversationConfig": {
+    "conversationType": "default",
+    "languageModel": "openai"
+  },
+  "memoryStorageConfig": {
+    "zep_memory": {
+      "zep_url": "http://localhost:8881",
+      "zep_optional_api_key": "optional_api_key"
+    },
+    "milvusMemory": {
+      "host": "127.0.0.1",
+      "port": "19530",
+      "user": "user",
+      "password": "Milvus",
+      "dbName": "default"
+    },
+    "enableLongMemory": false,
+    "enableSummary": false,
+    "languageModelForSummary": "openai",
+    "enableReflection": false,
+    "languageModelForReflection": "openai"
+  }
+}

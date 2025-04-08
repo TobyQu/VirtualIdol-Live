@@ -1,0 +1,22 @@
+common:
+  log_level: INFO
+  log_path: /var/lib/milvus/logs
+  log_rotate_max_size: 100
+  log_rotate_max_backups: 10
+
+etcd:
+  endpoints:
+    - etcd:2379
+  root_path: milvus
+  minio_address: minio:9000
+  minio_access_key: minioadmin
+  minio_secret_key: minioadmin
+
+storage:
+  path: /var/lib/milvus/data
+  minio_bucket_name: milvus
+  minio_root_path: milvus
+
+cache:
+  cache_size: 4GB
+  insert_buffer_size: 1GB 
