@@ -18,8 +18,23 @@ import {GlobalConfig, getConfig, initialFormData} from "@/features/config/config
 import {buildUrl} from "@/utils/buildUrl";
 import {generateMediaUrl, vrmModelData} from "@/features/media/mediaApi";
 import {ChatContainer} from "@/components/chat-container";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import dynamic from 'next/dynamic';
 
+// 动态导入 ResizablePanelGroup 组件，避免服务器端渲染问题
+const ResizablePanelGroup = dynamic(
+  () => import('@/components/ui/resizable').then((mod) => mod.ResizablePanelGroup),
+  { ssr: false }
+);
+
+const ResizablePanel = dynamic(
+  () => import('@/components/ui/resizable').then((mod) => mod.ResizablePanel),
+  { ssr: false }
+);
+
+const ResizableHandle = dynamic(
+  () => import('@/components/ui/resizable').then((mod) => mod.ResizableHandle),
+  { ssr: false }
+);
 
 // const m_plus_2 = M_PLUS_2({
 //   variable: "--font-m-plus-2",
@@ -52,6 +67,7 @@ export default function Home() {
     const [subtitle, setSubtitle] = useState("");
     const [displayedSubtitle, setDisplayedSubtitle] = useState("");
     const [backgroundImageUrl, setBackgroundImageUrl] = useState<string>(buildUrl("/bg-c.png"));
+    const [isClient, setIsClient] = useState(false);
     const typingDelay = 100; // 每个字的延迟时间，可以根据需要进行调整
     const MAX_SUBTITLES = 30;
     const handleSubtitle = (newSubtitle: string) => {
@@ -66,6 +82,10 @@ export default function Home() {
         });
     };
 
+    // 检查是否在客户端
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     useEffect(() => {
         if (socketInstance != null) {
@@ -358,61 +378,66 @@ export default function Home() {
             <Meta/>
             <Introduction openAiKey={openAiKey} onChangeAiKey={setOpenAiKey}/>
             
-            <ResizablePanelGroup direction="horizontal" className="h-screen w-full">
-                {/* VrmViewer 区域 (默认70%) */}
-                <ResizablePanel defaultSize={70} minSize={40}>
-                    <div className="relative h-full">
-                        <VrmViewer globalConfig={globalConfig}/>
-                        <div className="absolute bottom-1/4 left-1/2 transform -translate-x-1/2 z-10" style={{
-                            fontFamily: "fzfs",
-                            fontSize: "24px",
-                            color: "#555",
-                        }}>
-                            {displayedSubtitle}
+            {isClient ? (
+                <ResizablePanelGroup
+                    direction="horizontal"
+                    className="h-screen w-full"
+                >
+                    {/* VrmViewer 区域 (默认70%) */}
+                    <ResizablePanel defaultSize={70} minSize={40}>
+                        <div className="relative h-full">
+                            <VrmViewer globalConfig={globalConfig}/>
+                            <div className="absolute bottom-1/4 left-1/2 transform -translate-x-1/2 z-10" style={{
+                                fontFamily: "fzfs",
+                                fontSize: "24px",
+                                color: "#555",
+                            }}>
+                                {displayedSubtitle}
+                            </div>
                         </div>
-                    </div>
-                </ResizablePanel>
-                
-                {/* 分割手柄 */}
-                <ResizableHandle withHandle />
-                
-                {/* 聊天区域 (默认30%) */}
-                <ResizablePanel defaultSize={30} minSize={20}>
-                    <div className="h-full flex flex-col bg-white/90 shadow-lg">
-                        <div className="p-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-                            <h2 className="text-lg font-medium text-gray-800">
-                                {globalConfig?.characterConfig?.character_name || "虚拟角色"}聊天
-                            </h2>
-                            <SettingsSheet
-                                globalConfig={globalConfig}
-                                openAiKey={openAiKey}
-                                systemPrompt={systemPrompt}
-                                chatLog={chatLog}
-                                koeiroParam={koeiroParam}
-                                assistantMessage={assistantMessage}
-                                onChangeAiKey={setOpenAiKey}
-                                onChangeBackgroundImageUrl={data =>
-                                    setBackgroundImageUrl(generateMediaUrl(data))
-                                }
-                                onChangeSystemPrompt={setSystemPrompt}
-                                onChangeChatLog={handleChangeChatLog}
-                                onChangeKoeiromapParam={setKoeiroParam}
-                                onChangeGlobalConfig={onChangeGlobalConfig}
-                                handleClickResetChatLog={() => setChatLog([])}
-                                handleClickResetSystemPrompt={() => setSystemPrompt(SYSTEM_PROMPT)}
-                            />
+                    </ResizablePanel>
+                    
+                    {/* 分割手柄 */}
+                    <ResizableHandle withHandle />
+                    
+                    {/* 聊天区域 (默认30%) */}
+                    <ResizablePanel defaultSize={30} minSize={20}>
+                        <div className="h-full flex flex-col bg-white/90 shadow-lg">
+                            <div className="p-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+                                <h2 className="text-lg font-medium text-gray-800">
+                                    {globalConfig?.characterConfig?.character_name || "虚拟角色"}聊天
+                                </h2>
+                                <SettingsSheet
+                                    globalConfig={globalConfig}
+                                    openAiKey={openAiKey}
+                                    systemPrompt={systemPrompt}
+                                    chatLog={chatLog}
+                                    koeiroParam={koeiroParam}
+                                    assistantMessage={assistantMessage}
+                                    onChangeAiKey={setOpenAiKey}
+                                    onChangeBackgroundImageUrl={data =>
+                                        setBackgroundImageUrl(generateMediaUrl(data))
+                                    }
+                                    onChangeSystemPrompt={setSystemPrompt}
+                                    onChangeChatLog={handleChangeChatLog}
+                                    onChangeKoeiromapParam={setKoeiroParam}
+                                    onChangeGlobalConfig={onChangeGlobalConfig}
+                                    handleClickResetChatLog={() => setChatLog([])}
+                                    handleClickResetSystemPrompt={() => setSystemPrompt(SYSTEM_PROMPT)}
+                                />
+                            </div>
+                            <div className="flex-1 overflow-hidden">
+                                <ChatContainer
+                                    chatLog={chatLog}
+                                    isChatProcessing={chatProcessing}
+                                    onChatProcessStart={handleSendChat}
+                                    globalConfig={globalConfig}
+                                />
+                            </div>
                         </div>
-                        <div className="flex-1 overflow-hidden">
-                            <ChatContainer
-                                chatLog={chatLog}
-                                isChatProcessing={chatProcessing}
-                                onChatProcessStart={handleSendChat}
-                                globalConfig={globalConfig}
-                            />
-                        </div>
-                    </div>
-                </ResizablePanel>
-            </ResizablePanelGroup>
+                    </ResizablePanel>
+                </ResizablePanelGroup>
+            ) : null}
             
             <GitHubLink/>
         </div>

@@ -120,13 +120,21 @@ export function SettingsSheet({
   const [selectedVrmModelId, setSelectedVrmModelId] = useState(-1);
   const [deleteVrmModelLog, setDeleteVrmModelLog] = useState("");
   const [uploadRolePackageLog, setUploadRolePackageLog] = useState("");
+  const [isClient, setIsClient] = useState(false);
 
   const backgroundFileInputRef = useRef<HTMLInputElement>(null);
   const VrmModelFileInputRef = useRef<HTMLInputElement>(null);
   const RolePackagelFileInputRef = useRef<HTMLInputElement>(null);
 
+  // 检查是否在客户端
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // 初始化数据
   useEffect(() => {
+    if (!isClient) return;
+    
     // 获取角色列表
     customroleList().then(data => setCustomRoles(data));
     // 获取背景列表
@@ -139,7 +147,7 @@ export function SettingsSheet({
     getVoices().then(data => setVoices(data));
     // 获取情绪列表
     getEmotions().then(data => setEmotions(data));
-  }, []);
+  }, [isClient]);
 
   const handleCustomRole = () => {
     if (enableCreateRole) {

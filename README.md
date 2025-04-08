@@ -25,7 +25,7 @@ VirtualIdol Live 是一个基于人工智能的虚拟偶像直播系统，它通
 
 - 前端：Next.js, React, TypeScript, TailwindCSS
 - 后端：Django, Python
-- 数据库：PostgreSQL
+- 数据库：SQLite (开发环境), PostgreSQL (生产环境)
 - 向量数据库：Milvus
 - 部署：Docker, Docker Compose
 - 3D 渲染：Three.js, WebGL
@@ -50,13 +50,13 @@ cp backend/.env.example backend/.env
 - 前端：http://localhost:3000
 - 后端 API：http://localhost:8000
 
-## 开发指南
+<!-- ## 开发指南
 
 详细的开发指南请参考 [develop.md](develop.md)
 
 ## 常见问题
 
-常见问题解答请参考 [FAQ.md](FAQ.md)
+常见问题解答请参考 [FAQ.md](FAQ.md) -->
 
 ## 版权声明
 
