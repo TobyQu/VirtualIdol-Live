@@ -610,7 +610,7 @@ export default function Home() {
                         className="h-screen w-full"
                     >
                         {/* VrmViewer 区域 (默认70%，当聊天被分离时为100%) */}
-                        <ResizablePanel defaultSize={isDetached ? 100 : 70} minSize={40}>
+                        <ResizablePanel key={`viewer-panel-${isDetached}`} defaultSize={isDetached ? 100 : 70} minSize={40}>
                             <div className="relative h-full" style={{
                                 backgroundImage: `url(${backgroundImageUrl})`,
                                 backgroundSize: 'cover',
@@ -645,7 +645,7 @@ export default function Home() {
                                 <ResizableHandle withHandle />
                                 
                                 {/* 聊天区域 (默认30%) */}
-                                <ResizablePanel defaultSize={30} minSize={20}>
+                                <ResizablePanel key={`chat-panel-${isDetached}`} defaultSize={30} minSize={20}>
                                     <div className="h-full flex flex-col bg-white/90 shadow-lg">
                                         <div className="p-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
                                             <h2 className="text-lg font-medium text-gray-800">
