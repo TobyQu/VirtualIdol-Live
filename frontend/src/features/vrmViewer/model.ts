@@ -96,23 +96,37 @@ export class Model {
 
   // mixamo animation
   public async loadFBX(animationUrl: string) {
-    const { vrm, mixer, clipMap, blendTime,current_clipMap } = this;
+    const { vrm, mixer, clipMap, blendTime, current_clipMap } = this;
 
-    const animationClip = clipMap.get(animationUrl)
-    const currentClip = current_clipMap.get("current")
-    if (vrm == null || mixer == null || animationClip == null) {
-      throw new Error("You have to load VRM first");
+    // 检查基本前提条件
+    if (vrm == null || mixer == null) {
+      console.warn("VRM模型或混合器未加载，无法播放动画");
+      return;
     }
 
-    if (currentClip != null) {
+    // 获取动画剪辑
+    const animationClip = clipMap.get(animationUrl);
+    if (animationClip == null) {
+      console.warn(`动画 ${animationUrl} 未找到或尚未加载完成，请稍后再试`);
+      return;
+    }
 
-      const currentClipAction = mixer.clipAction(currentClip)
-      const animationClipAction = mixer.clipAction(animationClip)
-      this.crossPlay(currentClipAction,animationClipAction)
+    // 获取当前剪辑
+    const currentClip = current_clipMap.get("current");
+    
+    // 播放动画
+    if (currentClip != null) {
+      // 平滑过渡到新动画
+      const currentClipAction = mixer.clipAction(currentClip);
+      const animationClipAction = mixer.clipAction(animationClip);
+      this.crossPlay(currentClipAction, animationClipAction);
     } else {
+      // 直接播放新动画
       mixer.clipAction(animationClip)?.play();
     }
-    current_clipMap?.set("current", animationClip)
+    
+    // 更新当前动画引用
+    current_clipMap?.set("current", animationClip);
   }
 
    // 给动作切换时加一个淡入淡出效果，避免角色抖动

@@ -15,15 +15,7 @@ const nextConfig = {
     
     return config;
   },
-  // 配置重写规则，将 /assets/* 路径重定向到实际的assets目录
-  async rewrites() {
-    return [
-      {
-        source: '/assets/:path*',
-        destination: '/api/assets/:path*',
-      },
-    ];
-  },
+  // 不再需要重写规则，因为使用标准的public目录
 };
 
 module.exports = nextConfig;

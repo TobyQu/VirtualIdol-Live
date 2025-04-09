@@ -15,7 +15,7 @@ export interface AssetCategory {
 }
 
 export async function scanAssets(): Promise<AssetCategory> {
-  const assetsDir = path.join(process.cwd(), 'assets');
+  const assetsDir = path.join(process.cwd(), 'public', 'assets');
   
   try {
     const assets: AssetCategory = {

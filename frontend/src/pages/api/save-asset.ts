@@ -46,8 +46,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           fileName = baseName.substring(0, 45) + extension;
         }
 
-        // 确定目标目录
-        const assetsDir = path.join(process.cwd(), 'assets');
+        // 确定目标目录 - 现在使用public/assets
+        const assetsDir = path.join(process.cwd(), 'public', 'assets');
         let targetDir: string;
         
         if (assetType === 'vrm') {
@@ -72,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // 删除临时文件
         await fs.promises.unlink(file.filepath);
 
-        // 构建资产URL路径
+        // 构建资产URL路径 - 现在直接使用相对于public的路径
         const assetUrl = `/assets/${assetType}/${fileName}`;
 
         res.status(200).json({ 

@@ -80,24 +80,39 @@ export class Viewer {
 
             this._scene.add(this.model.vrm.scene);
 
-            // 加载所有人物动作
-            this.model.clipMap.set("idle_01", await loadMixamoAnimation("/assets/animations/daily/idle_01.fbx", this.model.vrm))
-            this.model.clipMap.set("idle_02", await loadMixamoAnimation("/assets/animations/daily/idle_02.fbx", this.model.vrm))
-            this.model.clipMap.set("idle_03", await loadMixamoAnimation("/assets/animations/daily/idle_03.fbx", this.model.vrm))
-            this.model.clipMap.set("idle_happy_01", await loadMixamoAnimation("/assets/animations/daily/idle_happy_01.fbx", this.model.vrm))
-            this.model.clipMap.set("idle_happy_02", await loadMixamoAnimation("/assets/animations/daily/idle_happy_02.fbx", this.model.vrm))
-            this.model.clipMap.set("idle_happy_03", await loadMixamoAnimation("/assets/animations/daily/idle_happy_03.fbx", this.model.vrm))
-            this.model.clipMap.set("standing_greeting", await loadMixamoAnimation("/assets/animations/daily/standing_greeting.fbx", this.model.vrm))
-            this.model.clipMap.set("thinking", await loadMixamoAnimation("/assets/animations/daily/thinking.fbx", this.model.vrm))
-            this.model.clipMap.set("excited", await loadMixamoAnimation("/assets/animations/emote/excited.fbx", this.model.vrm))
-
-            // const vrma = await loadVRMAnimation("/assets/animations/idle_loop.vrma");
-            this.model.loadFBX("idle_01")
+            try {
+                // 加载所有人物动作
+                console.log("开始加载模型动画...");
+                const animationPromises = [
+                    this.loadAnimationSafely("idle_01", "/assets/animations/daily/idle_01.fbx"),
+                    this.loadAnimationSafely("idle_02", "/assets/animations/daily/idle_02.fbx"),
+                    this.loadAnimationSafely("idle_03", "/assets/animations/daily/idle_03.fbx"),
+                    this.loadAnimationSafely("idle_happy_01", "/assets/animations/daily/idle_happy_01.fbx"),
+                    this.loadAnimationSafely("idle_happy_02", "/assets/animations/daily/idle_happy_02.fbx"),
+                    this.loadAnimationSafely("idle_happy_03", "/assets/animations/daily/idle_happy_03.fbx"),
+                    this.loadAnimationSafely("standing_greeting", "/assets/animations/daily/standing_greeting.fbx"),
+                    this.loadAnimationSafely("thinking", "/assets/animations/daily/thinking.fbx"),
+                    this.loadAnimationSafely("excited", "/assets/animations/emote/excited.fbx")
+                ];
+                
+                // 等待所有动画加载完成
+                await Promise.all(animationPromises);
+                console.log("所有动画加载完成");
+                
+                // 播放默认动画
+                if (this.model && this.model.clipMap.has("idle_01")) {
+                    this.model.loadFBX("idle_01");
+                }
+            } catch (error) {
+                console.error("加载动画时出错:", error);
+            }
 
             // HACK: アニメーションの原点がずれているので再生後にカメラ位置を調整する
             requestAnimationFrame(() => {
                 this.resetCamera();
             });
+        }).catch(error => {
+            console.error("加载VRM模型失败:", error);
         });
     }
 
@@ -211,4 +226,24 @@ export class Viewer {
             // console.log('Relative Rotation X:', relativeRotation.x, 'Y:', relativeRotation.y, 'Z:', relativeRotation.z);
         }
     };
+
+    // 安全地加载动画的辅助方法
+    private async loadAnimationSafely(animName: string, animPath: string): Promise<void> {
+        if (!this.model || !this.model.vrm) {
+            console.warn(`无法加载动画 ${animName}：VRM模型未加载`);
+            return;
+        }
+        
+        try {
+            const animation = await loadMixamoAnimation(animPath, this.model.vrm);
+            if (animation) {
+                this.model.clipMap.set(animName, animation);
+                console.log(`动画 ${animName} 加载成功`);
+            } else {
+                console.warn(`动画 ${animName} 加载失败：返回了空动画`);
+            }
+        } catch (error) {
+            console.error(`加载动画 ${animName} 时出错:`, error);
+        }
+    }
 }
