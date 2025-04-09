@@ -10,6 +10,7 @@ import { GlobalConfig } from "@/features/config/configApi"
 import { UseFormReturn } from "react-hook-form"
 import { Trash2, Upload } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { showSuccess, showError, showInfo } from "@/lib/toast"
 
 type AssetsSettingsProps = {
   globalConfig: GlobalConfig
@@ -140,12 +141,8 @@ export function AssetsSettings({
       const file = (e.target as HTMLInputElement).files?.[0]
       if (file) {
         try {
-          // 创建临时URL用于即时显示
-          const tempUrl = URL.createObjectURL(file)
-          viewer?.loadVrm(tempUrl)
-          
           // 显示上传中提示
-          alert("正在处理VRM模型，请稍候...")
+          showInfo("正在处理VRM模型，请稍候...")
           
           // 同时保存到前端资产目录和后端
           try {
@@ -167,31 +164,15 @@ export function AssetsSettings({
             };
             setAssets(filteredData);
             
-            // 更新全局配置
-            onChangeGlobalConfig({
-              ...globalConfig,
-              characterConfig: {
-                ...globalConfig.characterConfig,
-                vrmModel: assetUrl,
-                vrmModelType: 'system'
-              }
-            });
-            
-            // 更新选中状态
-            setSelectedVrmFile(assetUrl);
-            
-            // 加载VRM模型
-            viewer?.loadVrm(assetUrl);
-            
             // 显示成功消息
-            alert("VRM模型上传成功");
+            showSuccess("VRM模型上传成功，可从列表中选择应用");
           } catch (error) {
             console.error("上传VRM模型失败:", error);
-            alert(`上传VRM模型失败: ${error}`);
+            showError(`上传VRM模型失败: ${error}`);
           }
         } catch (error) {
           console.error("处理VRM模型时出错:", error);
-          alert(`处理VRM模型时出错: ${error}`);
+          showError(`处理VRM模型时出错: ${error}`);
         }
       }
     }
@@ -207,20 +188,8 @@ export function AssetsSettings({
       const file = (e.target as HTMLInputElement).files?.[0]
       if (file) {
         try {
-          // 创建临时URL用于即时显示
-          const tempUrl = URL.createObjectURL(file)
-          
-          // 更新UI显示（临时效果）
-          onChangeBackgroundImageUrl(tempUrl)
-          form.setValue("backgroundUrl", tempUrl)
-          setSelectedBackgroundFile(tempUrl)
-          onChangeGlobalConfig({
-            ...globalConfig,
-            background_url: tempUrl
-          })
-          
           // 显示上传中提示
-          alert("正在处理图片，请稍候...")
+          showInfo("正在处理图片，请稍候...")
           
           // 同时保存到前端资产目录和后端
           try {
@@ -242,24 +211,15 @@ export function AssetsSettings({
             };
             setAssets(filteredData);
             
-            // 更新UI使用前端资产路径
-            onChangeBackgroundImageUrl(assetUrl);
-            form.setValue("backgroundUrl", assetUrl);
-            setSelectedBackgroundFile(assetUrl);
-            onChangeGlobalConfig({
-              ...globalConfig,
-              background_url: assetUrl
-            });
-            
             // 显示成功消息
-            alert("背景图片上传成功");
+            showSuccess("背景图片上传成功，可从列表中选择应用");
           } catch (error) {
             console.error("上传背景图片失败:", error);
-            alert(`上传背景图片失败: ${error}`);
+            showError(`上传背景图片失败: ${error}`);
           }
         } catch (error) {
           console.error("处理图片时出错:", error)
-          alert(`处理图片时出错: ${error}`)
+          showError(`处理图片时出错: ${error}`)
         }
       }
     }
@@ -287,7 +247,7 @@ export function AssetsSettings({
   // 删除VRM模型
   const handleDeleteVrm = async (filePath: string) => {
     if (!canDeleteFile(filePath, 'vrm')) {
-      alert("无法删除正在使用的模型或默认模型");
+      showError("无法删除正在使用的模型或默认模型");
       return;
     }
     
@@ -304,10 +264,10 @@ export function AssetsSettings({
       };
       setAssets(filteredData);
       
-      alert("模型已成功删除");
+      showSuccess("模型已成功删除");
     } catch (error) {
       console.error("删除VRM模型失败:", error);
-      alert(`删除VRM模型失败: ${error}`);
+      showError(`删除VRM模型失败: ${error}`);
     } finally {
       setDeleteLoading(null);
     }
@@ -316,7 +276,7 @@ export function AssetsSettings({
   // 删除背景图片
   const handleDeleteBackground = async (filePath: string) => {
     if (!canDeleteFile(filePath, 'background')) {
-      alert("无法删除正在使用的背景图片或默认背景");
+      showError("无法删除正在使用的背景图片或默认背景");
       return;
     }
     
@@ -333,10 +293,10 @@ export function AssetsSettings({
       };
       setAssets(filteredData);
       
-      alert("背景图片已成功删除");
+      showSuccess("背景图片已成功删除");
     } catch (error) {
       console.error("删除背景图片失败:", error);
-      alert(`删除背景图片失败: ${error}`);
+      showError(`删除背景图片失败: ${error}`);
     } finally {
       setDeleteLoading(null);
     }

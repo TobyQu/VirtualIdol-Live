@@ -72,7 +72,7 @@ export const fetchAudio = async (talk: Talk, globalConfig: GlobalConfig): Promis
     const buffer = await generateAudioStream(
       talk.message, 
       globalConfig.ttsConfig.ttsVoiceId, 
-      'neutral' // 可以从全局配置中获取情绪设置
+      globalConfig.ttsConfig.emotion || 'neutral'
     );
     
     // 检查返回的音频数据
@@ -111,7 +111,7 @@ const fallbackToNonStreamAPI = async (talk: Talk, globalConfig: GlobalConfig): P
     text: talk.message,
     voice_id: globalConfig.ttsConfig.ttsVoiceId,
     tts_type: globalConfig.ttsConfig.ttsType || 'minimax',
-    emotion: 'neutral' // 可以从全局配置中获取情绪设置
+    emotion: globalConfig.ttsConfig.emotion || 'neutral'
   };
 
   const headers = {

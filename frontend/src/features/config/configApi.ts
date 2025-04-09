@@ -141,8 +141,9 @@ export const initialFormData = {
     "background_id": 1,
     "background_url": "",
     "ttsConfig": {
-        "ttsType": "Edge",
-        "ttsVoiceId": "zh-CN-XiaoyiNeural"
+        "ttsType": "minimax",
+        "ttsVoiceId": "female-shaonv",
+        "emotion": "neutral"
     }
 }
 

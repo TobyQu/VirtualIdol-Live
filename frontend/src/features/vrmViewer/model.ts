@@ -116,21 +116,27 @@ export class Model {
     
     // 播放动画
     if (currentClip != null) {
-      // 平滑过渡到新动画
+      // 平滑过渡到新动画，使用更长的过渡时间以提高流畅度
       const currentClipAction = mixer.clipAction(currentClip);
       const animationClipAction = mixer.clipAction(animationClip);
+      
+      // 设置更好的动画混合参数，提高过渡流畅度
       this.crossPlay(currentClipAction, animationClipAction);
     } else {
       // 直接播放新动画
-      mixer.clipAction(animationClip)?.play();
+      const action = mixer.clipAction(animationClip);
+      action.reset();
+      action.setEffectiveTimeScale(1.0); // 确保正常速度
+      action.setEffectiveWeight(1.0);    // 确保权重正确
+      action.play();
     }
     
     // 更新当前动画引用
     current_clipMap?.set("current", animationClip);
   }
 
-   // 给动作切换时加一个淡入淡出效果，避免角色抖动
-   public async crossPlay(curAction: THREE.AnimationAction, newAction: THREE.AnimationAction) {
+  // 恢复原始crossPlay方法
+  public async crossPlay(curAction: THREE.AnimationAction, newAction: THREE.AnimationAction) {
     curAction.fadeOut(1);
     newAction.reset();
     newAction.setEffectiveWeight(1);

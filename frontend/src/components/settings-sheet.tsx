@@ -32,6 +32,7 @@ import { LLMSettings } from "./settings/llm-settings"
 import { MemorySettings } from "./settings/memory-settings"
 import { AdvancedSettings } from "./settings/advanced-settings"
 import { AssetsSettings } from "./settings/assets-settings"
+import { showSuccess, showError } from "@/lib/toast"
 
 const llm_enums = ["openai", "ollama", 'zhipuai'];
 
@@ -123,14 +124,20 @@ export function SettingsSheet({
   const [deleteVrmModelLog, setDeleteVrmModelLog] = useState("");
   const [uploadRolePackageLog, setUploadRolePackageLog] = useState("");
   const [isClient, setIsClient] = useState(false);
+  const [isDetachedWindow, setIsDetachedWindow] = useState(false);
 
   const backgroundFileInputRef = useRef<HTMLInputElement>(null);
   const VrmModelFileInputRef = useRef<HTMLInputElement>(null);
   const RolePackagelFileInputRef = useRef<HTMLInputElement>(null);
 
-  // 检查是否在客户端
+  // 检查是否在客户端和是否在独立窗口
   useEffect(() => {
     setIsClient(true);
+    // 检测是否在独立窗口中
+    if (typeof window !== 'undefined') {
+      // 如果是在/chat页面，则认为是在独立窗口中
+      setIsDetachedWindow(window.location.pathname === '/chat');
+    }
   }, []);
 
   // 初始化数据
@@ -373,39 +380,35 @@ export function SettingsSheet({
       saveConfig(configToSave)
         .then(() => {
           console.log("Configuration saved successfully");
-          alert("设置已成功保存!");
+          showSuccess("设置已成功保存!");
         })
         .catch(error => {
           console.error("Failed to save configuration:", error);
-          alert(`保存设置失败: ${error.message}`);
+          showError(`保存设置失败: ${error.message}`);
         });
     } catch (e: unknown) {
       console.error("Error in handleSubmit:", e);
       const errorMessage = e instanceof Error ? e.message : String(e);
-      alert(`保存设置时出错: ${errorMessage}`);
+      showError(`保存设置时出错: ${errorMessage}`);
     }
   }
 
   return (
-    <Sheet open={open} modal={false} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <Settings2 className="h-5 w-5" />
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Settings2 className="h-4 w-4" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="right">
+      <SheetContent className="sheet-content" fullWidth={isDetachedWindow}>
         <SheetHeader>
           <div className="flex justify-between items-center">
             <SheetTitle>设置</SheetTitle>
-            
           </div>
           <SheetDescription className="flex justify-between items-center">
             <h2>调整虚拟角色的各项设置</h2>
-            <Button
-              type="button"
-              onClick={handleSubmit}
-            >
-            <Save className="mr-1 h-4 w-4" />  保存
+            <Button type="submit" onClick={handleSubmit}>
+              保存修改
             </Button>
           </SheetDescription>
         </SheetHeader>

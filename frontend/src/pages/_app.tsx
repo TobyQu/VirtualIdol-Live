@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import "@charcoal-ui/icons";
 import { useEffect } from "react";
+import { Toaster } from "@/components/ui/sonner";
 
 // 在服务器端渲染时抑制 useLayoutEffect 警告
 function suppressLayoutEffectWarning() {
@@ -24,5 +25,10 @@ export default function App({ Component, pageProps }: AppProps) {
     suppressLayoutEffectWarning();
   }, []);
 
-  return <Component {...pageProps} />;
+  return (
+    <>
+      <Component {...pageProps} />
+      <Toaster />
+    </>
+  );
 }

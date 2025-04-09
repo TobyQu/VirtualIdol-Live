@@ -1,22 +1,101 @@
-import { useContext, useCallback, useEffect } from "react";
+import { useContext, useCallback, useEffect, useState } from "react";
 import { ViewerContext } from "../features/vrmViewer/viewerContext";
 import { buildVrmModelUrl, generateMediaUrl } from "@/features/media/mediaApi";
 import { GlobalConfig, getConfig, initialFormData } from "@/features/config/configApi";
 import { buildUrl } from "@/utils/buildUrl";
 
+type LoadingStage = {
+  id: string;
+  label: string;
+  completed: boolean;
+};
+
 type Props = {
   globalConfig: GlobalConfig;
+  onLoadingStateChange?: (isLoading: boolean, stages: LoadingStage[]) => void;
 };
 
 export default function VrmViewer({
   globalConfig,
+  onLoadingStateChange
 }: Props) {
-
   const { viewer } = useContext(ViewerContext);
+  const [loadingStages, setLoadingStages] = useState<LoadingStage[]>([
+    { id: 'background', label: '加载背景', completed: false },
+    { id: 'vrm', label: '加载3D模型', completed: false },
+    { id: 'animation', label: '加载动画', completed: false }
+  ]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 更新加载状态
+  const updateLoadingStage = useCallback((stageId: string, completed: boolean) => {
+    setLoadingStages(prev => 
+      prev.map(stage => 
+        stage.id === stageId ? { ...stage, completed } : stage
+      )
+    );
+  }, []);
+
+  // 通知加载状态变化
+  useEffect(() => {
+    if (onLoadingStateChange) {
+      onLoadingStateChange(isLoading, loadingStages);
+    }
+  }, [isLoading, loadingStages, onLoadingStateChange]);
+
+  // 当背景加载完成后调用
+  useEffect(() => {
+    // 背景图片加载逻辑
+    if (globalConfig?.background_url) {
+      const img = new Image();
+      img.onload = () => {
+        updateLoadingStage('background', true);
+      };
+      img.onerror = () => {
+        console.error("背景图片加载失败");
+        updateLoadingStage('background', true); // 即使失败也标记为完成，避免卡住加载流程
+      };
+      img.src = globalConfig.background_url.startsWith('/assets/')
+        ? globalConfig.background_url
+        : generateMediaUrl(globalConfig.background_url);
+    } else {
+      // 没有背景图片时，直接标记为完成
+      updateLoadingStage('background', true);
+    }
+  }, [globalConfig?.background_url, updateLoadingStage]);
+
+  // 监听模型加载事件
+  useEffect(() => {
+    if (!viewer) return;
+
+    const handleVrmLoaded = () => {
+      updateLoadingStage('vrm', true);
+    };
+
+    const handleAnimationsLoaded = () => {
+      updateLoadingStage('animation', true);
+      setIsLoading(false);
+    };
+
+    // 设置事件监听
+    viewer.on('vrmLoaded', handleVrmLoaded);
+    viewer.on('animationsLoaded', handleAnimationsLoaded);
+
+    // 清理函数
+    return () => {
+      viewer.off('vrmLoaded', handleVrmLoaded);
+      viewer.off('animationsLoaded', handleAnimationsLoaded);
+    };
+  }, [viewer, updateLoadingStage]);
 
   // 当globalConfig变化时重新加载VRM模型
   useEffect(() => {
     if (viewer && viewer.isReady && globalConfig) {
+      // 重置加载状态
+      setIsLoading(true);
+      setLoadingStages(prev => prev.map(stage => ({ ...stage, completed: false })));
+      updateLoadingStage('background', true); // 背景已经在另一个effect中处理
+
       const vrmModel = globalConfig.characterConfig?.vrmModel || initialFormData.characterConfig.vrmModel;
       const vrmModelType = globalConfig.characterConfig?.vrmModelType || initialFormData.characterConfig.vrmModelType;
       
@@ -28,7 +107,7 @@ export default function VrmViewer({
         viewer.loadVrm(url);
       }
     }
-  }, [viewer, globalConfig]);
+  }, [viewer, globalConfig, updateLoadingStage]);
 
   const canvasRef = useCallback(
     (canvas: HTMLCanvasElement) => {
@@ -69,6 +148,12 @@ export default function VrmViewer({
             if (file_type === "vrm") {
               const blob = new Blob([file], { type: "application/octet-stream" });
               const url = window.URL.createObjectURL(blob);
+              
+              // 重置加载状态
+              setIsLoading(true);
+              setLoadingStages(prev => prev.map(stage => ({ ...stage, completed: false })));
+              updateLoadingStage('background', true); // 背景不需要重新加载
+              
               viewer.loadVrm(url);
             }
           });
@@ -83,12 +168,12 @@ export default function VrmViewer({
         });
       }
     },
-    [viewer]
+    [viewer, updateLoadingStage]
   );
 
   return (
-    <div className={"w-full h-full"} >
-      <canvas ref={canvasRef} className={"h-full w-full"}></canvas>
+    <div className="w-full h-full">
+      <canvas ref={canvasRef} className="h-full w-full"></canvas>
     </div>
   );
 }

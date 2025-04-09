@@ -41,6 +41,7 @@ import {Link} from "./link";
 import {damp} from 'three/src/math/MathUtils';
 import {join} from 'path';
 import {voiceData, getVoices, getEmotions} from '@/features/tts/ttsApi';
+import { showSuccess, showError } from "@/lib/toast";
 
 const tabNames = ['基础设置', '自定义角色设置', '大语言模型设置', '记忆模块设置', '高级设置'];
 const llm_enums = ["openai", "ollama",'zhipuai']
@@ -289,17 +290,17 @@ export const Settings = ({
             saveConfig(formData)
                 .then(() => {
                     console.log("Configuration saved successfully");
-                    alert("设置已成功保存!");
+                    showSuccess("设置已成功保存!");
                     onClickClose();
                 })
                 .catch(error => {
                     console.error("Failed to save configuration:", error);
-                    alert(`保存设置失败: ${error.message}`);
+                    showError(`保存设置失败: ${error.message}`);
                 });
         } catch (e: unknown) {
             console.error("Error in handleSubmit:", e);
             const errorMessage = e instanceof Error ? e.message : String(e);
-            alert(`保存设置时出错: ${errorMessage}`);
+            showError(`保存设置时出错: ${errorMessage}`);
         }
     }
 

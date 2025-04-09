@@ -9,6 +9,75 @@ body {
   background-repeat: no-repeat;
 }
 
+/* 添加独立窗口中Sheet组件的样式 */
+@media (max-width: 640px) {
+  [data-fullwidth="true"] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* 对于/chat路径下的样式特殊处理 */
+.detached-chat-window .sheet-content {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* 固定比例窗口样式 */
+html.fixed-ratio-window {
+  overflow: hidden;
+}
+
+html.fixed-ratio-window body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 宽屏时居中内容区域 */
+html.fixed-ratio-window[data-ratio="wide"] body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+html.fixed-ratio-window[data-ratio="wide"] .detached-chat-window {
+  width: var(--content-width);
+  height: var(--content-height);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+/* 高屏时居中内容区域 */
+html.fixed-ratio-window[data-ratio="tall"] body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+html.fixed-ratio-window[data-ratio="tall"] .detached-chat-window {
+  width: var(--content-width);
+  height: var(--content-height);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+/* 旧的固定尺寸样式，保留但不使用 */
+html.fixed-size-window {
+  overflow: hidden;
+  width: 390px;
+  height: 844px;
+}
+
+html.fixed-size-window body {
+  width: 390px;
+  height: 844px;
+  overflow: hidden;
+  position: fixed;
+}
+
 @layer components {
   .input-range {
     -webkit-appearance: none;
