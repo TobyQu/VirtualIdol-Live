@@ -1,4 +1,4 @@
-import { useContext, useCallback, useEffect, useState } from "react";
+import { useContext, useCallback, useEffect, useState, useRef } from "react";
 import { ViewerContext } from "../features/vrmViewer/viewerContext";
 import { buildVrmModelUrl, generateMediaUrl } from "@/features/media/mediaApi";
 import { GlobalConfig, getConfig, initialFormData } from "@/features/config/configApi";
@@ -26,6 +26,7 @@ export default function VrmViewer({
     { id: 'animation', label: '加载动画', completed: false }
   ]);
   const [isLoading, setIsLoading] = useState(true);
+  const lastLoadedModel = useRef('');
 
   // 更新加载状态
   const updateLoadingStage = useCallback((stageId: string, completed: boolean) => {
@@ -91,6 +92,17 @@ export default function VrmViewer({
   // 当globalConfig变化时重新加载VRM模型
   useEffect(() => {
     if (viewer && viewer.isReady && globalConfig) {
+      // 存储当前的模型路径
+      const currentVrmModel = globalConfig.characterConfig?.vrmModel || '';
+      
+      // 检查模型是否真的变化了，如果没有变化则不重新加载
+      if (!currentVrmModel || currentVrmModel === lastLoadedModel.current) {
+        return;
+      }
+      
+      // 更新已加载模型的记录
+      lastLoadedModel.current = currentVrmModel;
+      
       // 重置加载状态
       setIsLoading(true);
       setLoadingStages(prev => prev.map(stage => ({ ...stage, completed: false })));

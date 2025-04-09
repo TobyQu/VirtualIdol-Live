@@ -70,7 +70,7 @@ export function CharacterSettings({
         setSelectedBackgroundFile(bgPath);
       }
     });
-  }, [globalConfig]);
+  }, []);
 
   const handleCustomRole = () => {
     if (enableCreateRole) {
