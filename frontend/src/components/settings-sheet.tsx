@@ -31,6 +31,7 @@ import { VoiceSettings } from "./settings/voice-settings"
 import { LLMSettings } from "./settings/llm-settings"
 import { MemorySettings } from "./settings/memory-settings"
 import { AdvancedSettings } from "./settings/advanced-settings"
+import { AssetsSettings } from "./settings/assets-settings"
 
 const llm_enums = ["openai", "ollama", 'zhipuai'];
 
@@ -47,6 +48,7 @@ type FormValues = {
   characterName: string
   yourName: string
   backgroundUrl: string
+  vrmModel: string
   openaiApiKey: string
   openaiBaseUrl: string
   zhipuaiApiKey: string
@@ -213,6 +215,7 @@ export function SettingsSheet({
       characterName: globalConfig?.characterConfig?.character_name || "",
       yourName: globalConfig?.characterConfig?.yourName || "",
       backgroundUrl: globalConfig?.background_url || "",
+      vrmModel: globalConfig?.characterConfig?.vrmModel || "",
       openaiApiKey: globalConfig?.languageModelConfig?.openai?.OPENAI_API_KEY || "",
       openaiBaseUrl: globalConfig?.languageModelConfig?.openai?.OPENAI_BASE_URL || "",
       zhipuaiApiKey: globalConfig?.languageModelConfig?.zhipuai?.ZHIPUAI_API_KEY || "",
@@ -407,65 +410,76 @@ export function SettingsSheet({
           </SheetDescription>
         </SheetHeader>
         <div className="py-6">
-          <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="basic">基础设置</TabsTrigger>
-              <TabsTrigger value="character">角色设置</TabsTrigger>
-              <TabsTrigger value="voice">语音设置</TabsTrigger>
-              <TabsTrigger value="llm">语言模型</TabsTrigger>
-              <TabsTrigger value="memory">记忆模块</TabsTrigger>
-              <TabsTrigger value="advanced">高级设置</TabsTrigger>
-            </TabsList>
-            <TabsContent value="basic">
-              <BasicSettings
-                globalConfig={globalConfig}
-                onChangeGlobalConfig={onChangeGlobalConfig}
-                selectedRoleId={selectedRoleId}
-                enableCreateRole={enableCreateRole}
-                form={form}
-              />
-            </TabsContent>
-            <TabsContent value="character">
-              <CharacterSettings
-                globalConfig={globalConfig}
-                onChangeGlobalConfig={onChangeGlobalConfig}
-                onChangeBackgroundImageUrl={onChangeBackgroundImageUrl}
-                selectedRoleId={selectedRoleId}
-                setSelectedRoleId={setSelectedRoleId}
-                enableCreateRole={enableCreateRole}
-                setEnableCreateRole={setEnableCreateRole}
-                form={form}
-              />
-            </TabsContent>
-            <TabsContent value="voice">
-              <VoiceSettings
-                globalConfig={globalConfig}
-                onChangeGlobalConfig={onChangeGlobalConfig}
-                form={form}
-              />
-            </TabsContent>
-            <TabsContent value="llm">
-              <LLMSettings
-                globalConfig={globalConfig}
-                onChangeGlobalConfig={onChangeGlobalConfig}
-                form={form}
-              />
-            </TabsContent>
-            <TabsContent value="memory">
-              <MemorySettings
-                globalConfig={globalConfig}
-                onChangeGlobalConfig={onChangeGlobalConfig}
-                form={form}
-              />
-            </TabsContent>
-            <TabsContent value="advanced">
-              <AdvancedSettings
-                globalConfig={globalConfig}
-                onChangeGlobalConfig={onChangeGlobalConfig}
-                form={form}
-              />
-            </TabsContent>
-          </Tabs>
+          <Form {...form}>
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="grid w-full grid-cols-7">
+                <TabsTrigger value="basic">基础设置</TabsTrigger>
+                <TabsTrigger value="character">角色设置</TabsTrigger>
+                <TabsTrigger value="voice">语音设置</TabsTrigger>
+                <TabsTrigger value="llm">语言模型</TabsTrigger>
+                <TabsTrigger value="memory">记忆模块</TabsTrigger>
+                <TabsTrigger value="advanced">高级设置</TabsTrigger>
+                <TabsTrigger value="assets">资产设置</TabsTrigger>
+              </TabsList>
+              <TabsContent value="basic">
+                <BasicSettings
+                  globalConfig={globalConfig}
+                  onChangeGlobalConfig={onChangeGlobalConfig}
+                  selectedRoleId={selectedRoleId}
+                  enableCreateRole={enableCreateRole}
+                  form={form}
+                />
+              </TabsContent>
+              <TabsContent value="character">
+                <CharacterSettings
+                  globalConfig={globalConfig}
+                  onChangeGlobalConfig={onChangeGlobalConfig}
+                  onChangeBackgroundImageUrl={onChangeBackgroundImageUrl}
+                  selectedRoleId={selectedRoleId}
+                  setSelectedRoleId={setSelectedRoleId}
+                  enableCreateRole={enableCreateRole}
+                  setEnableCreateRole={setEnableCreateRole}
+                  form={form}
+                />
+              </TabsContent>
+              <TabsContent value="voice">
+                <VoiceSettings
+                  globalConfig={globalConfig}
+                  onChangeGlobalConfig={onChangeGlobalConfig}
+                  form={form}
+                />
+              </TabsContent>
+              <TabsContent value="llm">
+                <LLMSettings
+                  globalConfig={globalConfig}
+                  onChangeGlobalConfig={onChangeGlobalConfig}
+                  form={form}
+                />
+              </TabsContent>
+              <TabsContent value="memory">
+                <MemorySettings
+                  globalConfig={globalConfig}
+                  onChangeGlobalConfig={onChangeGlobalConfig}
+                  form={form}
+                />
+              </TabsContent>
+              <TabsContent value="advanced">
+                <AdvancedSettings
+                  globalConfig={globalConfig}
+                  onChangeGlobalConfig={onChangeGlobalConfig}
+                  form={form}
+                />
+              </TabsContent>
+              <TabsContent value="assets">
+                <AssetsSettings
+                  globalConfig={globalConfig}
+                  onChangeGlobalConfig={onChangeGlobalConfig}
+                  onChangeBackgroundImageUrl={onChangeBackgroundImageUrl}
+                  form={form}
+                />
+              </TabsContent>
+            </Tabs>
+          </Form>
         </div>
       </SheetContent>
     </Sheet>

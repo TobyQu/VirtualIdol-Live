@@ -5,7 +5,7 @@ const nextConfig = {
   basePath: process.env.BASE_PATH || "",
   trailingSlash: false,
   publicRuntimeConfig: {
-    root: process.env.BASE_PATH || "",
+    root: process.env.NODE_ENV === "production" ? "/chat-vrm" : "",
   },
   webpack: (config, { isServer, dev }) => {
     // 解决 useLayoutEffect SSR 警告问题
@@ -14,6 +14,15 @@ const nextConfig = {
     }
     
     return config;
+  },
+  // 配置重写规则，将 /assets/* 路径重定向到实际的assets目录
+  async rewrites() {
+    return [
+      {
+        source: '/assets/:path*',
+        destination: '/api/assets/:path*',
+      },
+    ];
   },
 };
 

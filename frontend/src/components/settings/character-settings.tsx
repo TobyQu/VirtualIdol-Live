@@ -8,7 +8,7 @@ import { GlobalConfig } from "@/features/config/configApi"
 import { UseFormReturn } from "react-hook-form"
 import { useState, useEffect, useRef, useContext, Dispatch, SetStateAction } from "react"
 import { custoRoleFormData, customrolEdit, customroleCreate, customroleDelete, customroleList } from "@/features/customRole/customRoleApi"
-import { uploadRolePackage } from "@/features/media/mediaApi"
+import { uploadRolePackage, getAssets, AssetFile, AssetCategory } from "@/features/media/mediaApi"
 import { ViewerContext } from "@/features/vrmViewer/viewerContext"
 
 type CharacterSettingsProps = {
@@ -37,12 +37,39 @@ export function CharacterSettings({
   const [customRoleLog, setCustomRoleLog] = useState("");
   const [deleteCustomRoleLog, setDeleteCustomRoleLog] = useState("");
   const [uploadRolePackageLog, setUploadRolePackageLog] = useState("");
+  const [publicAssets, setPublicAssets] = useState<AssetCategory>({ vrm: [], background: [], animation: [] });
+  const [selectedVrmFile, setSelectedVrmFile] = useState<string>("");
+  const [selectedBackgroundFile, setSelectedBackgroundFile] = useState<string>("");
   const RolePackagelFileInputRef = useRef<HTMLInputElement>(null);
   const { viewer } = useContext(ViewerContext);
 
   useEffect(() => {
     customroleList().then(data => setCustomRoles(data));
-  }, []);
+    
+    // 获取assets目录下的资源文件
+    getAssets().then((data: AssetCategory) => {
+      // 过滤掉大小为0的文件
+      const filteredData = {
+        vrm: data.vrm.filter((file: AssetFile) => file.size > 0),
+        background: data.background.filter((file: AssetFile) => file.size > 0),
+        animation: data.animation.filter((file: AssetFile) => file.size > 0)
+      };
+
+      setPublicAssets(filteredData);
+      
+      // 如果有设置的VRM模型，则选择它
+      const vrmPath = globalConfig?.characterConfig?.vrmModel || "";
+      if (vrmPath && filteredData.vrm.some((v: AssetFile) => v.path === vrmPath)) {
+        setSelectedVrmFile(vrmPath);
+      }
+      
+      // 如果有设置的背景图片，则选择它
+      const bgPath = globalConfig?.background_url || "";
+      if (bgPath && filteredData.background.some((b: AssetFile) => b.path === bgPath)) {
+        setSelectedBackgroundFile(bgPath);
+      }
+    });
+  }, [globalConfig]);
 
   const handleCustomRole = () => {
     if (enableCreateRole) {
@@ -107,6 +134,8 @@ export function CharacterSettings({
     };
     input.click();
   };
+  
+
 
   return (
     <Form {...form}>
@@ -180,6 +209,73 @@ export function CharacterSettings({
               {deleteCustomRoleLog}
             </p>
           )}
+        </div>
+
+        {/* 选择VRM模型 */}
+        <div className="space-y-4">
+          <div className="pb-2 border-b">
+            <h4 className="text-sm font-medium text-foreground/90">选择VRM模型</h4>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <FormLabel>系统模型</FormLabel>
+              <Select
+                value={selectedVrmFile || "none"}
+                onValueChange={handleVrmFileChange}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="选择VRM模型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">请选择</SelectItem>
+                  {publicAssets.vrm.map((file) => (
+                    <SelectItem key={file.path} value={file.path}>
+                      {file.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClickOpenVrmFile}
+                className="w-full"
+              >
+                上传自定义VRM模型
+              </Button>
+            </div>
+          </div>
+        </div>
+        
+        {/* 选择背景图片 */}
+        <div className="space-y-4">
+          <div className="pb-2 border-b">
+            <h4 className="text-sm font-medium text-foreground/90">选择背景图片</h4>
+          </div>
+          
+          <div className="space-y-2">
+            <FormLabel>系统背景</FormLabel>
+            <Select
+              value={selectedBackgroundFile || "none"}
+              onValueChange={handleBackgroundFileChange}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="选择背景图片" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">请选择</SelectItem>
+                {publicAssets.background.map((file) => (
+                  <SelectItem key={file.path} value={file.path}>
+                    {file.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* 编辑角色 */}
@@ -303,7 +399,7 @@ export function CharacterSettings({
                   <FormLabel>角色模板类型</FormLabel>
                   <FormControl>
                     <Select
-                      value={customRole.custom_role_template_type}
+                      value={customRole.custom_role_template_type || "default"}
                       onValueChange={(value) => {
                         field.onChange(value);
                         setCustomRole({
@@ -316,7 +412,7 @@ export function CharacterSettings({
                         <SelectValue placeholder="请选择" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="-1">请选择</SelectItem>
+                        <SelectItem value="default">请选择</SelectItem>
                         <SelectItem value="zh">zh</SelectItem>
                       </SelectContent>
                     </Select>
@@ -450,43 +546,6 @@ export function CharacterSettings({
                               yourName: e.target.value,
                             },
                           })
-                        }}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* VRM 模型 */}
-            <div className="space-y-4">
-              <div className="pb-2 border-b">
-                <h4 className="text-sm font-medium text-foreground/90">VRM 模型</h4>
-              </div>
-              <Button onClick={handleClickOpenVrmFile} variant="outline" className="w-full">
-                选择 VRM 文件
-              </Button>
-            </div>
-
-            {/* 背景图片 */}
-            <div className="space-y-4">
-              <div className="pb-2 border-b">
-                <h4 className="text-sm font-medium text-foreground/90">背景图片 URL</h4>
-              </div>
-              <FormField
-                control={form.control}
-                name="backgroundUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        className="w-full"
-                        type="text"
-                        value={globalConfig?.background_url}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          onChangeBackgroundImageUrl(e.target.value)
                         }}
                       />
                     </FormControl>

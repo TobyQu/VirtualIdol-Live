@@ -45,10 +45,21 @@ export class Viewer {
             this.unloadVRM();
         }
 
+        console.log("Loading VRM model:", url);
+        
+        // 添加简单的URL验证
+        if (!url || url.trim() === '') {
+            console.error("Invalid VRM model URL provided");
+            return;
+        }
+
         // gltf and vrm
         this.model = new Model(this._camera || new THREE.Object3D());
         this.model.loadVRM(url).then(async () => {
-            if (!this.model?.vrm) return;
+            if (!this.model?.vrm) {
+                console.error("Failed to load VRM model:", url);
+                return;
+            }
 
             // 在这里设置模型面向相机
             if (this._camera) {
@@ -70,18 +81,17 @@ export class Viewer {
             this._scene.add(this.model.vrm.scene);
 
             // 加载所有人物动作
-            this.model.clipMap.set("idle_01", await loadMixamoAnimation(buildUrl("daily/idle_01.fbx"), this.model.vrm))
-            this.model.clipMap.set("idle_02", await loadMixamoAnimation(buildUrl("daily/idle_02.fbx"), this.model.vrm))
-            this.model.clipMap.set("idle_03", await loadMixamoAnimation(buildUrl("daily/idle_03.fbx"), this.model.vrm))
-            this.model.clipMap.set("idle_happy_01", await loadMixamoAnimation(buildUrl("daily/idle_happy_01.fbx"), this.model.vrm))
-            this.model.clipMap.set("idle_happy_02", await loadMixamoAnimation(buildUrl("daily/idle_happy_02.fbx"), this.model.vrm))
-            this.model.clipMap.set("idle_happy_03", await loadMixamoAnimation(buildUrl("daily/idle_happy_03.fbx"), this.model.vrm))
-            this.model.clipMap.set("standing_greeting", await loadMixamoAnimation(buildUrl("daily/standing_greeting.fbx"), this.model.vrm))
-            this.model.clipMap.set("thinking", await loadMixamoAnimation(buildUrl("daily/thinking.fbx"), this.model.vrm))
-            this.model.clipMap.set("excited", await loadMixamoAnimation(buildUrl("emote/excited.fbx"), this.model.vrm))
+            this.model.clipMap.set("idle_01", await loadMixamoAnimation("/assets/animations/daily/idle_01.fbx", this.model.vrm))
+            this.model.clipMap.set("idle_02", await loadMixamoAnimation("/assets/animations/daily/idle_02.fbx", this.model.vrm))
+            this.model.clipMap.set("idle_03", await loadMixamoAnimation("/assets/animations/daily/idle_03.fbx", this.model.vrm))
+            this.model.clipMap.set("idle_happy_01", await loadMixamoAnimation("/assets/animations/daily/idle_happy_01.fbx", this.model.vrm))
+            this.model.clipMap.set("idle_happy_02", await loadMixamoAnimation("/assets/animations/daily/idle_happy_02.fbx", this.model.vrm))
+            this.model.clipMap.set("idle_happy_03", await loadMixamoAnimation("/assets/animations/daily/idle_happy_03.fbx", this.model.vrm))
+            this.model.clipMap.set("standing_greeting", await loadMixamoAnimation("/assets/animations/daily/standing_greeting.fbx", this.model.vrm))
+            this.model.clipMap.set("thinking", await loadMixamoAnimation("/assets/animations/daily/thinking.fbx", this.model.vrm))
+            this.model.clipMap.set("excited", await loadMixamoAnimation("/assets/animations/emote/excited.fbx", this.model.vrm))
 
-            // const vrma = await loadVRMAnimation(buildUrl("/idle_loop.vrma"));
-            // if (vrma) this.model.loadAnimation(vrma);
+            // const vrma = await loadVRMAnimation("/assets/animations/idle_loop.vrma");
             this.model.loadFBX("idle_01")
 
             // HACK: アニメーションの原点がずれているので再生後にカメラ位置を調整する

@@ -40,16 +40,35 @@ export class Model {
         })
     );
 
-    const gltf = await loader.loadAsync(url);
+    try {
+      // 检查URL是否有效
+      if (!url || url.trim() === '') {
+        throw new Error("Empty or invalid URL provided");
+      }
+      
+      const gltf = await loader.loadAsync(url);
 
-    const vrm = (this.vrm = gltf.userData.vrm);
-    vrm.scene.name = "VRMRoot";
+      if (!gltf || !gltf.userData) {
+        throw new Error("Failed to load VRM model: Invalid GLTF");
+      }
 
-    VRMUtils.rotateVRM0(vrm);
-    this.mixer = new THREE.AnimationMixer(vrm.scene);
+      const vrm = (this.vrm = gltf.userData.vrm);
+      
+      if (!vrm) {
+        throw new Error("Failed to load VRM model: Missing VRM data");
+      }
+      
+      vrm.scene.name = "VRMRoot";
 
-    this.emoteController = new EmoteController(vrm, this._lookAtTargetParent);
+      VRMUtils.rotateVRM0(vrm);
+      this.mixer = new THREE.AnimationMixer(vrm.scene);
 
+      this.emoteController = new EmoteController(vrm, this._lookAtTargetParent);
+    } catch (error) {
+      console.error("Error loading VRM model:", error);
+      this.vrm = null;
+      throw error;
+    }
   }
 
   public unLoadVrm() {
