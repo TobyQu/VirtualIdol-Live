@@ -211,72 +211,9 @@ export function CharacterSettings({
           )}
         </div>
 
-        {/* 选择VRM模型 */}
-        <div className="space-y-4">
-          <div className="pb-2 border-b">
-            <h4 className="text-sm font-medium text-foreground/90">选择VRM模型</h4>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <FormLabel>系统模型</FormLabel>
-              <Select
-                value={selectedVrmFile || "none"}
-                onValueChange={handleVrmFileChange}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="选择VRM模型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">请选择</SelectItem>
-                  {publicAssets.vrm.map((file) => (
-                    <SelectItem key={file.path} value={file.path}>
-                      {file.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClickOpenVrmFile}
-                className="w-full"
-              >
-                上传自定义VRM模型
-              </Button>
-            </div>
-          </div>
-        </div>
         
-        {/* 选择背景图片 */}
-        <div className="space-y-4">
-          <div className="pb-2 border-b">
-            <h4 className="text-sm font-medium text-foreground/90">选择背景图片</h4>
-          </div>
-          
-          <div className="space-y-2">
-            <FormLabel>系统背景</FormLabel>
-            <Select
-              value={selectedBackgroundFile || "none"}
-              onValueChange={handleBackgroundFileChange}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="选择背景图片" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">请选择</SelectItem>
-                {publicAssets.background.map((file) => (
-                  <SelectItem key={file.path} value={file.path}>
-                    {file.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
+        
+       
 
         {/* 编辑角色 */}
         {(selectedRoleId !== -1 || enableCreateRole) && (

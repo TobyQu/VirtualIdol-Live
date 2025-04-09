@@ -387,7 +387,7 @@ export function SettingsSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} modal={false} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon">
           <Settings2 className="h-5 w-5" />
