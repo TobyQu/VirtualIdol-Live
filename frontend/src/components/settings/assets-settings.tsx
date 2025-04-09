@@ -8,7 +8,7 @@ import { ViewerContext } from "@/features/vrmViewer/viewerContext"
 import { getAssets, AssetFile, AssetCategory, uploadBackground, uploadVrmModel, queryBackground, queryUserVrmModels, generateMediaUrl, saveAsset, deleteAsset } from "@/features/media/mediaApi"
 import { GlobalConfig } from "@/features/config/configApi"
 import { UseFormReturn } from "react-hook-form"
-import { Trash2 } from "lucide-react"
+import { Trash2, Upload } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 
 type AssetsSettingsProps = {
@@ -399,11 +399,11 @@ export function AssetsSettings({
               <div className="pt-2">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={handleClickOpenVrmFile}
                   className="w-full"
                 >
-                  上传自定义VRM模型
+                  <Upload className="mr-2 h-4 w-4" /> 上传自定义VRM模型
                 </Button>
               </div>
               
@@ -445,6 +445,7 @@ export function AssetsSettings({
                           <AlertDialogFooter>
                             <AlertDialogCancel>取消</AlertDialogCancel>
                             <AlertDialogAction 
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               onClick={(e: React.MouseEvent) => {
                                 e.stopPropagation();
                                 handleDeleteVrm(file.path);
@@ -507,11 +508,11 @@ export function AssetsSettings({
               <div className="pt-2">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={handleClickOpenBackgroundFile}
                   className="w-full"
                 >
-                  上传自定义背景图片
+                  <Upload className="mr-2 h-4 w-4" /> 上传自定义背景图片
                 </Button>
               </div>
               
@@ -555,6 +556,7 @@ export function AssetsSettings({
                           <AlertDialogFooter>
                             <AlertDialogCancel>取消</AlertDialogCancel>
                             <AlertDialogAction 
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               onClick={(e: React.MouseEvent) => {
                                 e.stopPropagation();
                                 handleDeleteBackground(file.path);

@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Settings2, Plus, Trash2 } from "lucide-react"
+import { Settings2, Plus, Trash2, Save } from "lucide-react"
 import { GlobalConfig } from "@/features/config/configApi"
 import { Message } from "@/features/messages/messages"
 import { KoeiroParam } from "@/features/constants/koeiroParam"
@@ -405,7 +405,7 @@ export function SettingsSheet({
               type="button"
               onClick={handleSubmit}
             >
-              保存
+            <Save className="mr-1 h-4 w-4" />  保存
             </Button>
           </SheetDescription>
         </SheetHeader>

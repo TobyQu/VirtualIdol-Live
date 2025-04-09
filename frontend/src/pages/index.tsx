@@ -279,7 +279,7 @@ export default function Home() {
         async (globalConfig: GlobalConfig, type: string, user_name: string, content: string) => {
 
             console.log("UserMessage:" + content)
-
+            console.log("Chat processing state changing to true")
             setChatProcessing(true);
 
             // handleBehaviorAction(
@@ -309,6 +309,7 @@ export default function Home() {
             //     "neutral",
             // );
 
+            console.log("Chat processing state changing to false")
             setChatProcessing(false);
         },
         [systemPrompt, chatLog, setChatLog, handleSpeakAi, setImageUrl, openAiKey, koeiroParam]
@@ -405,7 +406,7 @@ export default function Home() {
                         <div className="h-full flex flex-col bg-white/90 shadow-lg">
                             <div className="p-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
                                 <h2 className="text-lg font-medium text-gray-800">
-                                    {globalConfig?.characterConfig?.character_name || "虚拟角色"}聊天
+                                    {globalConfig?.characterConfig?.character_name || "虚拟角色"}
                                 </h2>
                                 <SettingsSheet
                                     globalConfig={globalConfig}

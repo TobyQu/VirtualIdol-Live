@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash2, X, Save, Upload } from "lucide-react"
 import { GlobalConfig } from "@/features/config/configApi"
 import { UseFormReturn } from "react-hook-form"
 import { useState, useEffect, useRef, useContext, Dispatch, SetStateAction } from "react"
@@ -362,6 +362,7 @@ export function CharacterSettings({
               <Button
                 type="button"
                 variant="outline"
+                size="sm"
                 onClick={() => {
                   setEnableCreateRole(false);
                   setSelectedRoleId(-1);
@@ -369,11 +370,12 @@ export function CharacterSettings({
                   setCustomRoleLog("");
                 }}
               >
-                取消
+                <X className="mr-1 h-4 w-4" /> 取消
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="default"
+                size="sm"
                 onClick={() => {
                   handleCustomRole();
                   setEnableCreateRole(false);
@@ -382,7 +384,7 @@ export function CharacterSettings({
                   setCustomRoleLog("");
                 }}
               >
-                提交
+                <Save className="mr-1 h-4 w-4" /> 提交
               </Button>
             </div>
             {customRoleLog && (
@@ -406,11 +408,11 @@ export function CharacterSettings({
               <div className="space-y-2">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={handleRolePackageButtonClick}
                   className="w-full"
                 >
-                  上传角色包
+                  <Upload className="mr-2 h-4 w-4" /> 上传角色包
                 </Button>
                 <input
                   type="file"

@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "@radix-ui/react-alert-dialog": "^1.1.7"
+    "@radix-ui/react-alert-dialog": "^1.1.7",
+    "@radix-ui/react-avatar": "^1.1.4"
   }
 }

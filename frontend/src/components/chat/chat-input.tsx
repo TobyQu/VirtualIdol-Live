@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Mic, Send } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface ChatInputProps {
   className?: string
@@ -40,44 +41,44 @@ export function ChatInput({
 
   return (
     <div className={cn(
-      "relative border-t border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80",
+      "relative bg-background p-3",
       className
     )}>
-      <div className="max-w-3xl mx-auto p-4">
-        <div className="relative flex items-center">
-          <button
-            className={cn(
-              "absolute left-4 p-1 rounded-full transition-colors",
-              isMicRecording 
-                ? "text-blue-500 hover:text-blue-600 bg-blue-50" 
-                : "text-gray-400 hover:text-gray-500 hover:bg-gray-100"
-            )}
+      <div className="max-w-3xl mx-auto">
+        <div className="relative flex items-center gap-2">
+          <Button
+            type="button"
+            size="icon"
+            variant={isMicRecording ? "default" : "secondary"}
+            className="flex-none"
             disabled={isChatProcessing}
             onClick={onClickMicButton}
           >
-            <Mic className="h-5 w-5" />
-          </button>
+            <Mic className="h-4 w-4" />
+            <span className="sr-only">使用麦克风</span>
+          </Button>
+
           <textarea
             placeholder={placeholder}
-            className="w-full pl-12 pr-12 py-3 bg-white text-gray-900 text-[15px] rounded-xl border border-gray-200 hover:border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] max-h-[120px] resize-none shadow-sm"
+            className="flex-1 px-3 py-2 bg-background text-foreground text-sm rounded-md border border-input hover:border-accent focus:border-ring focus:ring-1 focus:ring-ring focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed min-h-[40px] max-h-[120px] resize-none"
             rows={1}
             onChange={(e) => setInput(e.target.value)}
             value={input}
             onKeyDown={handleKeyDown}
             disabled={isChatProcessing}
           />
-          <button
-            className={cn(
-              "absolute right-4 p-1 rounded-full transition-colors",
-              input.trim() && !isChatProcessing
-                ? "text-blue-500 hover:text-blue-600 bg-blue-50"
-                : "text-gray-400"
-            )}
+
+          <Button
+            type="button"
+            size="icon"
+            variant="default"
+            className="flex-none"
             disabled={isChatProcessing || !input.trim()}
             onClick={handleSendClick}
           >
-            <Send className="h-5 w-5" />
-          </button>
+            <Send className="h-4 w-4" />
+            <span className="sr-only">发送消息</span>
+          </Button>
         </div>
       </div>
     </div>

@@ -3,6 +3,8 @@ import { Message } from "@/features/messages/messages"
 import { ChatList } from "./chat/chat-list"
 import { ChatInput } from "./chat/chat-input"
 import { GlobalConfig } from "@/features/config/configApi"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { MessageCircle } from "lucide-react"
 
 interface ChatContainerProps {
   chatLog: Message[]
@@ -79,12 +81,25 @@ export function ChatContainer({
 
   const characterName = globalConfig?.characterConfig?.character_name || "虚拟角色";
 
+  // 记录加载状态的变化，用于调试
+  useEffect(() => {
+    console.log("Chat processing state:", isChatProcessing);
+  }, [isChatProcessing]);
+
   return (
-    <div className="flex flex-col h-full bg-white">
-      <div className="flex-1 overflow-hidden relative">
-        <ChatList messages={chatLog} />
-      </div>
-      <div className="flex-none">
+    <Card className="flex flex-col h-full border-0 rounded-none shadow-none bg-background">
+      <CardHeader className="px-4 py-3 border-b bg-card">
+        <div className="flex items-center">
+          <MessageCircle className="h-5 w-5 mr-2 text-primary" />
+          <CardTitle className="text-base font-medium">与 {characterName} 的对话</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 p-0 overflow-hidden">
+        <div className="h-full">
+          <ChatList messages={chatLog} isLoading={isChatProcessing} />
+        </div>
+      </CardContent>
+      <div className="flex-none border-t">
         <ChatInput
           isChatProcessing={isChatProcessing}
           isMicRecording={isMicRecording}
@@ -92,6 +107,6 @@ export function ChatContainer({
           onClickMicButton={handleClickMicButton}
         />
       </div>
-    </div>
+    </Card>
   )
 } 
