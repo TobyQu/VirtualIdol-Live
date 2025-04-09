@@ -19,13 +19,47 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# 设置Conda环境
+setup_conda_env() {
+    print_message "设置conda环境..."
+    
+    # 确保conda已经初始化
+    # 尝试使用conda的shell.bash hook初始化
+    eval "$(conda shell.bash hook)"
+    
+    # 检查VirtualIdol-Live环境是否存在
+    if conda env list | grep -q "VirtualIdol-Live"; then
+        print_message "激活 VirtualIdol-Live 环境..."
+        conda activate VirtualIdol-Live || {
+            print_error "激活 VirtualIdol-Live 环境失败"
+            return 1
+        }
+    else
+        # 创建环境
+        print_message "创建 VirtualIdol-Live 环境 (Python 3.11)..."
+        conda create -y -n VirtualIdol-Live python=3.11 || {
+            print_error "创建 VirtualIdol-Live 环境失败"
+            return 1
+        }
+        
+        print_message "激活 VirtualIdol-Live 环境..."
+        conda activate VirtualIdol-Live || {
+            print_error "激活 VirtualIdol-Live 环境失败"
+            return 1
+        }
+    fi
+    
+    print_message "conda环境设置成功"
+    return 0
+}
+
 # 初始化conda函数 - 使用用户提供的脚本
 init_conda() {
     print_message "初始化conda环境..."
     
     # >>> conda initialize >>>
     # !! Contents within this block are managed by 'conda init' !!
-    __conda_setup="$('/opt/miniconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+    __conda_setup="$('/opt/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
     if [ $? -eq 0 ]; then
         eval "$__conda_setup"
     else
@@ -43,6 +77,9 @@ init_conda() {
         print_error "conda初始化失败"
         return 1
     fi
+    
+    # 运行conda init以确保可以使用conda activate
+    conda init bash
     
     print_message "conda初始化成功"
     return 0
@@ -106,7 +143,9 @@ start_backend() {
     
     # 激活conda环境
     print_message "激活 conda 环境..."
-    conda activate virtualwife || {
+    # 确保conda已正确初始化
+    eval "$(conda shell.bash hook)"
+    conda activate VirtualIdol-Live || {
         print_error "激活conda环境失败"
         exit 1
     }
@@ -196,11 +235,26 @@ cleanup() {
 main() {
     print_message "开始启动 VirtualWife 项目..."
     
-    # 先初始化conda环境
-    init_conda || {
-        print_error "初始化conda环境失败"
-        exit 1
-    }
+    # 检查conda命令是否可用
+    if command -v conda &> /dev/null; then
+        # conda命令可用，设置环境
+        setup_conda_env || {
+            print_error "设置conda环境失败"
+            exit 1
+        }
+    else
+        # conda命令不可用，尝试初始化
+        init_conda || {
+            print_error "初始化conda环境失败"
+            exit 1
+        }
+        
+        # 初始化成功后，设置环境
+        setup_conda_env || {
+            print_error "设置conda环境失败"
+            exit 1
+        }
+    fi
     
     # 检查环境要求
     check_requirements
