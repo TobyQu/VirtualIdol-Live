@@ -77,6 +77,7 @@ export default function Home() {
     const [globalConfig, setGlobalConfig] = useState<GlobalConfig>(initialFormData);
     const [subtitle, setSubtitle] = useState("");
     const [displayedSubtitle, setDisplayedSubtitle] = useState("");
+    const [currentEmote, setCurrentEmote] = useState<string>("neutral");
     const [backgroundImageUrl, setBackgroundImageUrl] = useState<string>("/assets/backgrounds/bg-c.png");
     const [isClient, setIsClient] = useState(false);
     const [loadingStages, setLoadingStages] = useState<Array<{id: string; label: string; completed: boolean}>>([
@@ -88,7 +89,7 @@ export default function Home() {
     const [isDetached, setIsDetached] = useState(false);
     const [chatWindow, setChatWindow] = useState<Window | null>(null);
     const typingDelay = 100; // 每个字的延迟时间，可以根据需要进行调整
-    const MAX_SUBTITLES = 30;
+    const MAX_SUBTITLES = 100; // 增加字幕长度上限，以适应更多的文本
     
     // 处理加载状态变化
     const handleLoadingStateChange = useCallback((loading: boolean, stages: Array<{id: string; label: string; completed: boolean}>) => {
@@ -97,15 +98,52 @@ export default function Home() {
     }, []);
     
     const handleSubtitle = (newSubtitle: string) => {
-
         setDisplayedSubtitle((prevSubtitle: string) => {
             const updatedSubtitle = prevSubtitle + newSubtitle;
             if (updatedSubtitle.length > MAX_SUBTITLES) {
-                const startIndex = updatedSubtitle.length - MAX_SUBTITLES;
-                return updatedSubtitle.substring(startIndex);
+                // 如果超过最大字数，创建新的段落而不是截断
+                return updatedSubtitle.substring(updatedSubtitle.length - MAX_SUBTITLES);
             }
             return updatedSubtitle;
         });
+    };
+
+    // 清除字幕，用于新对话开始前
+    const clearSubtitle = () => {
+        setDisplayedSubtitle("");
+    };
+    
+    // 分割长文本为多个部分
+    const splitTextIntoChunks = (text: string, maxLength: number = 60): string[] => {
+        if (text.length <= maxLength) return [text];
+        
+        const chunks: string[] = [];
+        // 尝试按标点符号分割
+        const sentences = text.match(/[^，。？！,.?!]+[，。？！,.?!]?/g) || [];
+        
+        let currentChunk = '';
+        for (const sentence of sentences) {
+            if (currentChunk.length + sentence.length <= maxLength) {
+                currentChunk += sentence;
+            } else {
+                if (currentChunk) chunks.push(currentChunk);
+                
+                // 处理特别长的句子
+                if (sentence.length > maxLength) {
+                    let tempSentence = sentence;
+                    while (tempSentence.length > maxLength) {
+                        chunks.push(tempSentence.substring(0, maxLength));
+                        tempSentence = tempSentence.substring(maxLength);
+                    }
+                    currentChunk = tempSentence;
+                } else {
+                    currentChunk = sentence;
+                }
+            }
+        }
+        
+        if (currentChunk) chunks.push(currentChunk);
+        return chunks;
     };
 
     // 检查是否在客户端
@@ -201,6 +239,7 @@ export default function Home() {
         // 文ごとに音声を生成 & 再生、返答を表示
         const currentAssistantMessage = sentences.join(" ");
         setSubtitle(aiTextLog);
+        setCurrentEmote(emote || "neutral");
         handleSpeakAi(globalConfig, aiTalks[0], () => {
             setAssistantMessage(currentAssistantMessage);
             // handleSubtitle(aiText + " "); // 添加空格以区分不同的字幕
@@ -240,6 +279,7 @@ export default function Home() {
         aiTextLog += aiText;
         // 文ごとに音声を生成 & 再生、返答を表示
         setSubtitle(aiTextLog);
+        setCurrentEmote(emote || "neutral");
         handleSpeakAi(globalConfig, aiTalks[0], () => {
 
             // 如果有，则播放相应动作
@@ -287,15 +327,46 @@ export default function Home() {
     }
 
     const startTypewriterEffect = (text: string) => {
-        let currentIndex = 0;
-        const subtitleInterval = setInterval(() => {
-            const newSubtitle = text[currentIndex];
-            handleSubtitle(newSubtitle);
-            currentIndex++;
-            if (currentIndex >= text.length) {
-                clearInterval(subtitleInterval);
-            }
-        }, 100); // 每个字符的间隔时间
+        // 开始新的对话前清空字幕
+        clearSubtitle();
+        
+        // 分割长文本为多个气泡
+        const textChunks = splitTextIntoChunks(text);
+        let chunkIndex = 0;
+        
+        const processNextChunk = () => {
+            if (chunkIndex >= textChunks.length) return;
+            
+            const currentChunk = textChunks[chunkIndex];
+            let charIndex = 0;
+            
+            // 清空上一个气泡内容
+            clearSubtitle();
+            
+            // 逐字显示当前块
+            const intervalId = setInterval(() => {
+                handleSubtitle(currentChunk[charIndex]);
+                charIndex++;
+                
+                if (charIndex >= currentChunk.length) {
+                    clearInterval(intervalId);
+                    
+                    // 当前块结束后延迟显示下一块
+                    setTimeout(() => {
+                        chunkIndex++;
+                        if (chunkIndex < textChunks.length) {
+                            processNextChunk();
+                        } else {
+                            // 所有文本显示完毕后的延迟
+                            setTimeout(clearSubtitle, 4000);
+                        }
+                    }, 1500);
+                }
+            }, typingDelay);
+        };
+        
+        // 开始处理第一块
+        processNextChunk();
     };
 
     /**
@@ -628,13 +699,58 @@ export default function Home() {
                                     globalConfig={globalConfig}
                                     onLoadingStateChange={handleLoadingStateChange}
                                 />
-                                <div className="absolute bottom-1/4 left-1/2 transform -translate-x-1/2 z-10" style={{
-                                    fontFamily: "fzfs",
-                                    fontSize: "24px",
-                                    color: "#555",
-                                }}>
-                                    {displayedSubtitle}
-                                </div>
+                                {displayedSubtitle && (
+                                    <div 
+                                        className="absolute bottom-32 left-1/2 transform -translate-x-1/2 z-10 max-w-md"
+                                        style={{
+                                            animation: 'fadeIn 0.3s ease-out',
+                                            transition: 'all 0.3s ease',
+                                            filter: 'drop-shadow(1px 1px 2px rgba(0,0,0,0.1))',
+                                            minWidth: '260px',
+                                            maxWidth: '80%'
+                                        }}
+                                    >
+                                        <div className="relative rounded-2xl bg-white" 
+                                            style={{
+                                                borderWidth: '3px',
+                                                borderColor: '#FF8000',
+                                                boxShadow: 'inset 0 0 0 1px #FFCC00',
+                                                padding: '10px 16px',
+                                                borderRadius: '16px'
+                                            }}>
+                                            {/* 文本内容 */}
+                                            <p style={{
+                                                fontFamily: "fzfs",
+                                                fontSize: "18px",
+                                                color: 'black',
+                                                lineHeight: "1.5",
+                                                margin: 0,
+                                                padding: 0,
+                                                wordBreak: "break-word",
+                                                textAlign: 'center'
+                                            }}>
+                                                {displayedSubtitle}
+                                            </p>
+                                            
+                                            {/* 气泡尖角 - 朝上，更接近示例图片的样式 */}
+                                            <div className="absolute left-1/2 transform -translate-x-1/2" style={{ top: '-13px' }}>
+                                                <svg width="26" height="13" viewBox="0 0 26 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    {/* 背景填充 */}
+                                                    <path d="M2 13L13 2L24 13H2Z" fill="white"/>
+                                                    {/* 边框 */}
+                                                    <path d="M1 13L13 1L25 13" stroke="#FF8000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                {/* 添加全局动画样式 */}
+                                <style jsx global>{`
+                                    @keyframes fadeIn {
+                                        from { opacity: 0; transform: translate(-50%, 15px); }
+                                        to { opacity: 1; transform: translate(-50%, 0); }
+                                    }
+                                `}</style>
                             </div>
                         </ResizablePanel>
                         
