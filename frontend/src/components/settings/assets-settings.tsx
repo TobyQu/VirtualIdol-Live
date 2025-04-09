@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ViewerContext } from "@/features/vrmViewer/viewerContext"
-import { getAssets, AssetFile, AssetCategory } from "@/features/media/mediaApi"
+import { getAssets, AssetFile, AssetCategory, uploadBackground, uploadVrmModel, queryBackground, queryUserVrmModels, generateMediaUrl, saveAsset } from "@/features/media/mediaApi"
 import { GlobalConfig } from "@/features/config/configApi"
 import { UseFormReturn } from "react-hook-form"
 
@@ -119,11 +119,131 @@ export function AssetsSettings({
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.vrm'
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (file) {
-        const url = URL.createObjectURL(file)
-        viewer?.loadVrm(url)
+        try {
+          // 创建临时URL用于即时显示
+          const tempUrl = URL.createObjectURL(file)
+          viewer?.loadVrm(tempUrl)
+          
+          // 显示上传中提示
+          alert("正在处理VRM模型，请稍候...")
+          
+          // 同时保存到前端资产目录和后端
+          try {
+            // 将文件保存到前端资产目录
+            const assetUrl = await saveAsset(file, 'vrm');
+            console.log("前端VRM资产URL:", assetUrl);
+            
+            // 同时上传到后端（为了保持兼容）
+            const formData = new FormData();
+            formData.append('vrm', file);
+            await uploadVrmModel(formData);
+            
+            // 刷新资产列表
+            const assetData = await getAssets();
+            const filteredData = {
+              vrm: assetData.vrm.filter((file: AssetFile) => file.size > 0),
+              background: assetData.background.filter((file: AssetFile) => file.size > 0),
+              animation: assetData.animation.filter((file: AssetFile) => file.size > 0)
+            };
+            setAssets(filteredData);
+            
+            // 更新全局配置
+            onChangeGlobalConfig({
+              ...globalConfig,
+              characterConfig: {
+                ...globalConfig.characterConfig,
+                vrmModel: assetUrl,
+                vrmModelType: 'system'
+              }
+            });
+            
+            // 更新选中状态
+            setSelectedVrmFile(assetUrl);
+            
+            // 加载VRM模型
+            viewer?.loadVrm(assetUrl);
+            
+            // 显示成功消息
+            alert("VRM模型上传成功");
+          } catch (error) {
+            console.error("上传VRM模型失败:", error);
+            alert(`上传VRM模型失败: ${error}`);
+          }
+        } catch (error) {
+          console.error("处理VRM模型时出错:", error);
+          alert(`处理VRM模型时出错: ${error}`);
+        }
+      }
+    }
+    input.click()
+  }
+
+  // 上传自定义背景图片
+  const handleClickOpenBackgroundFile = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        try {
+          // 创建临时URL用于即时显示
+          const tempUrl = URL.createObjectURL(file)
+          
+          // 更新UI显示（临时效果）
+          onChangeBackgroundImageUrl(tempUrl)
+          form.setValue("backgroundUrl", tempUrl)
+          setSelectedBackgroundFile(tempUrl)
+          onChangeGlobalConfig({
+            ...globalConfig,
+            background_url: tempUrl
+          })
+          
+          // 显示上传中提示
+          alert("正在处理图片，请稍候...")
+          
+          // 同时保存到前端资产目录和后端
+          try {
+            // 将文件保存到前端资产目录
+            const assetUrl = await saveAsset(file, 'backgrounds');
+            console.log("前端资产URL:", assetUrl);
+            
+            // 同时上传到后端（为了保持兼容）
+            const formData = new FormData();
+            formData.append('image', file);
+            await uploadBackground(formData);
+            
+            // 刷新资产列表
+            const assetData = await getAssets();
+            const filteredData = {
+              vrm: assetData.vrm.filter((file: AssetFile) => file.size > 0),
+              background: assetData.background.filter((file: AssetFile) => file.size > 0),
+              animation: assetData.animation.filter((file: AssetFile) => file.size > 0)
+            };
+            setAssets(filteredData);
+            
+            // 更新UI使用前端资产路径
+            onChangeBackgroundImageUrl(assetUrl);
+            form.setValue("backgroundUrl", assetUrl);
+            setSelectedBackgroundFile(assetUrl);
+            onChangeGlobalConfig({
+              ...globalConfig,
+              background_url: assetUrl
+            });
+            
+            // 显示成功消息
+            alert("背景图片上传成功");
+          } catch (error) {
+            console.error("上传背景图片失败:", error);
+            alert(`上传背景图片失败: ${error}`);
+          }
+        } catch (error) {
+          console.error("处理图片时出错:", error)
+          alert(`处理图片时出错: ${error}`)
+        }
       }
     }
     input.click()
@@ -236,6 +356,17 @@ export function AssetsSettings({
                     </FormItem>
                   )}
                 />
+              </div>
+              
+              <div className="pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClickOpenBackgroundFile}
+                  className="w-full"
+                >
+                  上传自定义背景图片
+                </Button>
               </div>
               
               <div className="grid grid-cols-2 gap-2 mt-4">

@@ -29,9 +29,26 @@ function ensureTrailingSlash(url: string): string {
 }
 
 // 定义一个发送POST请求的函数
-export async function postRequest(endpoint: string, headers: Record<string, string>, data: object): Promise<any> {
+export async function postRequest(endpoint: string, headers: Record<string, string>, data: object | FormData): Promise<any> {
   const url = ensureTrailingSlash(endpoint);
-  console.log(`Sending POST request to: ${baseUrl}${url}`, data);
+  console.log(`Sending POST request to: ${baseUrl}${url}`);
+  
+  // 如果数据是FormData对象，则输出其中的文件名而不是整个对象
+  if (data instanceof FormData) {
+    const fileEntries = [];
+    for (const pair of data.entries()) {
+      if (pair[1] instanceof File) {
+        const file = pair[1] as File;
+        fileEntries.push(`${pair[0]}: ${file.name} (${file.size} bytes, ${file.type})`);
+      } else {
+        fileEntries.push(`${pair[0]}: ${pair[1]}`);
+      }
+    }
+    console.log(`FormData: {${fileEntries.join(', ')}}`);
+  } else {
+    console.log(`Data:`, data);
+  }
+  
   const response = await axios.post(`${baseUrl}${url}`, data, { headers });
   console.log(`POST response:`, response.data);
   return response.data; // 返回解析后的数据

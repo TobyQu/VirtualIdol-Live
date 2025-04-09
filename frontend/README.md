@@ -1,65 +1,50 @@
-# ChatVRM
+# VirtualIdol Live
 
-ChatVRMはブラウザで簡単に3Dキャラクターと会話ができるデモアプリケーションです。
+VirtualIdol Live是一个浏览器端3D虚拟伴侣应用，让用户可以与个性化的3D人物进行互动和对话。
 
-VRMファイルをインポートしてキャラクターに合わせた声の調整や、感情表現を含んだ返答文の生成などを行うことができます。
+## 功能特点
 
-ChatVRMの各機能は主に以下の技術を使用しています。
+- 支持导入VRM模型文件，打造专属虚拟伴侣
+- 语音识别与合成，实现自然交流体验
+- 基于大语言模型的对话系统，提供智能回复
+- 表情与动作系统，展现丰富情感表达
+- 个性化设置，定制您理想的虚拟伴侣
 
-- ユーザーの音声の認識
-    - [Web Speech API(SpeechRecognition)](https://developer.mozilla.org/ja/docs/Web/API/SpeechRecognition)
-- 返答文の生成
-    - [ChatGPT API](https://platform.openai.com/docs/api-reference/chat)
-- 読み上げ音声の生成
-    - [Koeiro API](http://koeiromap.rinna.jp/)
-- 3Dキャラクターの表示
-    - [@pixiv/three-vrm](https://github.com/pixiv/three-vrm)
+## 技术栈
 
+- 用户语音识别：Web Speech API
+- 对话生成：大型语言模型API
+- 语音合成：多种TTS引擎支持
+- 3D角色渲染：three.js和@pixiv/three-vrm
+- 前端框架：Next.js
 
-## デモ
+## 本地开发
 
-GitHub Pagesでデモを公開しています。
-
-[https://pixiv.github.io/ChatVRM](https://pixiv.github.io/ChatVRM)
-
-
-## 実行
-ローカル環境で実行する場合はこのリポジトリをクローンするか、ダウンロードしてください。
+克隆此仓库到本地：
 
 ```bash
-git clone git@github.com:pixiv/ChatVRM.git
+git clone <repository-url>
+cd VirtualIdol Live/frontend
 ```
 
-必要なパッケージをインストールしてください。
+安装依赖：
+
 ```bash
-npm install
+bun install
 ```
 
-パッケージのインストールが完了した後、以下のコマンドで開発用のWebサーバーを起動します。
+启动开发服务器：
+
 ```bash
-npm run dev
+bun run dev
 ```
 
-実行後、以下のURLにアクセスして動作を確認して下さい。
+访问 [http://localhost:3000](http://localhost:3000) 查看应用。
 
-[http://localhost:3000](http://localhost:3000) 
+## 配置
 
+在使用前，您需要设置相关API密钥和配置。请参考`.env.example`文件创建您自己的`.env.local`文件。
 
----
+## 许可证
 
-## ChatGPT API
-
-ChatVRMでは返答文の生成にChatGPT APIを使用しています。
-
-ChatGPT APIの仕様や利用規約については以下のリンクや公式サイトをご確認ください。
-
-- [https://platform.openai.com/docs/api-reference/chat](https://platform.openai.com/docs/api-reference/chat)
-- [https://openai.com/policies/api-data-usage-policies](https://openai.com/policies/api-data-usage-policies)
-
-
-## Koeiro API
-ChatVRMでは返答文の音声読み上げにKoeiro APIを使用しています。
-
-Koeiro APIの仕様や利用規約については以下のリンクや公式サイトをご確認ください。
-
-- [http://koeiromap.rinna.jp/](http://koeiromap.rinna.jp/)
+本项目采用 [LICENSE] 许可证。
