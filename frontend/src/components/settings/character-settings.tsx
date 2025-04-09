@@ -10,6 +10,7 @@ import { useState, useEffect, useRef, useContext, Dispatch, SetStateAction } fro
 import { custoRoleFormData, customrolEdit, customroleCreate, customroleDelete, customroleList } from "@/features/customRole/customRoleApi"
 import { uploadRolePackage, getAssets, AssetFile, AssetCategory } from "@/features/media/mediaApi"
 import { ViewerContext } from "@/features/vrmViewer/viewerContext"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 type CharacterSettingsProps = {
   globalConfig: GlobalConfig
@@ -135,16 +136,15 @@ export function CharacterSettings({
     input.click();
   };
   
-
-
   return (
-    <Form {...form}>
-      <div className="grid gap-6">
-        {/* 选择角色 */}
-        <div className="space-y-4">
-          <div className="pb-2 border-b">
-            <h4 className="text-sm font-medium text-foreground/90">选择角色</h4>
-          </div>
+    <div className="space-y-6">
+      {/* 选择角色 */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">选择角色</CardTitle>
+          <CardDescription>选择或创建虚拟角色</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="flex items-center space-x-2">
             <Select
               defaultValue={selectedRoleId === -1 ? "-1" : selectedRoleId.toString()}
@@ -209,20 +209,21 @@ export function CharacterSettings({
               {deleteCustomRoleLog}
             </p>
           )}
-        </div>
+        </CardContent>
+      </Card>
 
-        
-        
-       
-
-        {/* 编辑角色 */}
-        {(selectedRoleId !== -1 || enableCreateRole) && (
-          <div className="space-y-4">
-            <div className="pb-2 border-b">
-              <h4 className="text-sm font-medium text-foreground/90">
-                {enableCreateRole ? "创建角色" : "编辑角色"}
-              </h4>
-            </div>
+      {/* 编辑角色 */}
+      {(selectedRoleId !== -1 || enableCreateRole) && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">
+              {enableCreateRole ? "创建角色" : "编辑角色"}
+            </CardTitle>
+            <CardDescription>
+              {enableCreateRole ? "创建新的虚拟角色" : "编辑当前选中的角色"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
               <FormLabel>角色名称</FormLabel>
               <Input
@@ -389,18 +390,20 @@ export function CharacterSettings({
                 {customRoleLog}
               </p>
             )}
-          </div>
-        )}
+          </CardContent>
+        </Card>
+      )}
 
-        {/* 角色包上传及以下所有表单 */}
-        {!(selectedRoleId !== -1 || enableCreateRole) && (
-          <>
-            {/* 角色包上传 */}
-            <div className="space-y-4">
-              <div className="pb-2 border-b">
-                <h4 className="text-sm font-medium text-foreground/90">加载角色安装包</h4>
-              </div>
-              <div className="flex items-center space-x-2">
+      {/* 角色包上传 */}
+      {!(selectedRoleId !== -1 || enableCreateRole) && (
+        <>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">加载角色安装包</CardTitle>
+              <CardDescription>上传角色安装包文件</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -422,77 +425,87 @@ export function CharacterSettings({
                   {uploadRolePackageLog}
                 </p>
               )}
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* 角色名称 */}
-            <div className="space-y-4">
-              <div className="pb-2 border-b">
-                <h4 className="text-sm font-medium text-foreground/90">角色名称</h4>
+          {/* 角色名称 */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">角色名称</CardTitle>
+              <CardDescription>当前选中角色的名称</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <FormField
+                  control={form.control}
+                  name="characterName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          className="w-full"
+                          type="text"
+                          readOnly={true}
+                          value={globalConfig?.characterConfig?.character_name}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            onChangeGlobalConfig({
+                              ...globalConfig,
+                              characterConfig: {
+                                ...globalConfig?.characterConfig,
+                                character_name: e.target.value,
+                              },
+                            })
+                          }}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               </div>
-              <FormField
-                control={form.control}
-                name="characterName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        className="w-full"
-                        type="text"
-                        readOnly={true}
-                        value={globalConfig?.characterConfig?.character_name}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          onChangeGlobalConfig({
-                            ...globalConfig,
-                            characterConfig: {
-                              ...globalConfig?.characterConfig,
-                              character_name: e.target.value,
-                            },
-                          })
-                        }}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* 你的名字 */}
-            <div className="space-y-4">
-              <div className="pb-2 border-b">
-                <h4 className="text-sm font-medium text-foreground/90">你的名字</h4>
+          {/* 你的名字 */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">你的名字</CardTitle>
+              <CardDescription>设置与虚拟角色交流时你的称呼</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <FormField
+                  control={form.control}
+                  name="yourName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          className="w-full"
+                          type="text"
+                          value={globalConfig?.characterConfig?.yourName}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            onChangeGlobalConfig({
+                              ...globalConfig,
+                              characterConfig: {
+                                ...globalConfig?.characterConfig,
+                                yourName: e.target.value,
+                              },
+                            })
+                          }}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               </div>
-              <FormField
-                control={form.control}
-                name="yourName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        className="w-full"
-                        type="text"
-                        value={globalConfig?.characterConfig?.yourName}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          onChangeGlobalConfig({
-                            ...globalConfig,
-                            characterConfig: {
-                              ...globalConfig?.characterConfig,
-                              yourName: e.target.value,
-                            },
-                          })
-                        }}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
-          </>
-        )}
-      </div>
-    </Form>
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </div>
   )
 } 

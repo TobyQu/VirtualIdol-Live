@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ViewerContext } from "@/features/vrmViewer/viewerContext"
-import { getAssets, AssetFile, AssetCategory, uploadBackground, uploadVrmModel, queryBackground, queryUserVrmModels, generateMediaUrl, saveAsset } from "@/features/media/mediaApi"
+import { getAssets, AssetFile, AssetCategory, uploadBackground, uploadVrmModel, queryBackground, queryUserVrmModels, generateMediaUrl, saveAsset, deleteAsset } from "@/features/media/mediaApi"
 import { GlobalConfig } from "@/features/config/configApi"
 import { UseFormReturn } from "react-hook-form"
+import { Trash2 } from "lucide-react"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 
 type AssetsSettingsProps = {
   globalConfig: GlobalConfig
@@ -23,14 +25,17 @@ export function AssetsSettings({
   form
 }: AssetsSettingsProps) {
   const [assets, setAssets] = useState<AssetCategory>({ vrm: [], background: [], animation: [] })
-  const [selectedVrmFile, setSelectedVrmFile] = useState<string>("")
-  const [selectedBackgroundFile, setSelectedBackgroundFile] = useState<string>("")
+  const [selectedVrmFile, setSelectedVrmFile] = useState<string>(form.getValues("vrmModel") || "")
+  const [selectedBackgroundFile, setSelectedBackgroundFile] = useState<string>(form.getValues("backgroundUrl") || "")
   const [activeTab, setActiveTab] = useState<string>("vrm-models")
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
   const { viewer } = useContext(ViewerContext)
 
-  useEffect(() => {
-    // 获取assets目录下的资源文件
-    getAssets().then((data: AssetCategory) => {
+  // 加载资产并设置初始选中状态
+  const loadAssets = async () => {
+    try {
+      const data = await getAssets();
+      
       // 过滤掉大小为0的文件
       const filteredData = {
         vrm: data.vrm.filter((file: AssetFile) => file.size > 0),
@@ -48,33 +53,43 @@ export function AssetsSettings({
       const vrmPath = formVrmModel || globalConfig?.characterConfig?.vrmModel || ""
       if (vrmPath && filteredData.vrm.some((v: AssetFile) => v.path === vrmPath)) {
         setSelectedVrmFile(vrmPath)
+        form.setValue("vrmModel", vrmPath, { shouldDirty: false });
       }
       
       // 如果有设置的背景图片，则选择它
       const bgPath = formBackgroundUrl || globalConfig?.background_url || ""
       if (bgPath && filteredData.background.some((b: AssetFile) => b.path === bgPath)) {
         setSelectedBackgroundFile(bgPath)
+        form.setValue("backgroundUrl", bgPath, { shouldDirty: false });
       }
-    })
-  }, [globalConfig, form])
+    } catch (error) {
+      console.error("加载资产出错:", error);
+    }
+  };
 
+  useEffect(() => {
+    loadAssets();
+  }, [globalConfig, form]);
+  
   // 监听form字段变化并同步到组件状态
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
-      if (name === "vrmModel" && value.vrmModel) {
+      if (name === "vrmModel" && value.vrmModel && value.vrmModel !== selectedVrmFile) {
         setSelectedVrmFile(value.vrmModel);
       }
-      if (name === "backgroundUrl" && value.backgroundUrl) {
+      if (name === "backgroundUrl" && value.backgroundUrl && value.backgroundUrl !== selectedBackgroundFile) {
         setSelectedBackgroundFile(value.backgroundUrl);
       }
     });
     
     return () => subscription.unsubscribe();
-  }, [form]);
+  }, [form, selectedVrmFile, selectedBackgroundFile]);
 
   // 选择VRM模型文件
   const handleVrmFileChange = (value: string) => {
     setSelectedVrmFile(value)
+    // 同步更新form表单的值，确保Select组件的值也被更新
+    form.setValue("vrmModel", value);
     
     // 如果选择"none"，则不更新全局配置
     if (value === "none") {
@@ -98,6 +113,8 @@ export function AssetsSettings({
   // 选择背景图片
   const handleBackgroundFileChange = (value: string) => {
     setSelectedBackgroundFile(value)
+    // 同步更新form表单的值，确保Select组件的值也被更新
+    form.setValue("backgroundUrl", value);
     
     // 如果选择"none"，则不更新背景
     if (value === "none") {
@@ -249,6 +266,82 @@ export function AssetsSettings({
     input.click()
   }
 
+  // 检查文件是否可以删除 (不是当前使用的文件，且不是default开头的文件)
+  const canDeleteFile = (filePath: string, fileType: 'vrm' | 'background'): boolean => {
+    // 检查文件名是否以default开头（忽略大小写）
+    const fileName = filePath.split('/').pop() || '';
+    if (fileName.toLowerCase().startsWith('default')) {
+      return false;
+    }
+    
+    // 检查文件是否当前正在使用
+    if (fileType === 'vrm' && filePath === selectedVrmFile) {
+      return false;
+    } else if (fileType === 'background' && filePath === selectedBackgroundFile) {
+      return false;
+    }
+    
+    return true;
+  }
+  
+  // 删除VRM模型
+  const handleDeleteVrm = async (filePath: string) => {
+    if (!canDeleteFile(filePath, 'vrm')) {
+      alert("无法删除正在使用的模型或默认模型");
+      return;
+    }
+    
+    try {
+      setDeleteLoading(filePath);
+      await deleteAsset(filePath, 'vrm');
+      
+      // 刷新资产列表
+      const assetData = await getAssets();
+      const filteredData = {
+        vrm: assetData.vrm.filter((file: AssetFile) => file.size > 0),
+        background: assetData.background.filter((file: AssetFile) => file.size > 0),
+        animation: assetData.animation.filter((file: AssetFile) => file.size > 0)
+      };
+      setAssets(filteredData);
+      
+      alert("模型已成功删除");
+    } catch (error) {
+      console.error("删除VRM模型失败:", error);
+      alert(`删除VRM模型失败: ${error}`);
+    } finally {
+      setDeleteLoading(null);
+    }
+  }
+  
+  // 删除背景图片
+  const handleDeleteBackground = async (filePath: string) => {
+    if (!canDeleteFile(filePath, 'background')) {
+      alert("无法删除正在使用的背景图片或默认背景");
+      return;
+    }
+    
+    try {
+      setDeleteLoading(filePath);
+      await deleteAsset(filePath, 'backgrounds');
+      
+      // 刷新资产列表
+      const assetData = await getAssets();
+      const filteredData = {
+        vrm: assetData.vrm.filter((file: AssetFile) => file.size > 0),
+        background: assetData.background.filter((file: AssetFile) => file.size > 0),
+        animation: assetData.animation.filter((file: AssetFile) => file.size > 0)
+      };
+      setAssets(filteredData);
+      
+      alert("背景图片已成功删除");
+    } catch (error) {
+      console.error("删除背景图片失败:", error);
+      alert(`删除背景图片失败: ${error}`);
+    } finally {
+      setDeleteLoading(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Tabs 
@@ -313,6 +406,59 @@ export function AssetsSettings({
                   上传自定义VRM模型
                 </Button>
               </div>
+              
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                {assets.vrm.map((file) => (
+                  <div 
+                    key={file.path} 
+                    className={`
+                      relative border rounded p-1 cursor-pointer hover:border-primary
+                      ${selectedVrmFile === file.path ? 'border-primary border-2' : 'border-gray-200'}
+                    `}
+                    onClick={() => handleVrmFileChange(file.path)}
+                  >
+                    <div className="flex justify-center items-center h-20 bg-gray-100 rounded">
+                      <span className="text-xs text-center">3D模型</span>
+                    </div>
+                    <p className="text-xs text-center mt-1 truncate">{file.name}</p>
+                    
+                    {canDeleteFile(file.path, 'vrm') && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-1 right-1 h-6 w-6 bg-white rounded-full opacity-70 hover:opacity-100"
+                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                            disabled={deleteLoading === file.path}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>确认删除</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              确定要删除模型 "{file.name}" 吗？此操作无法撤销。
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>取消</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                handleDeleteVrm(file.path);
+                              }}
+                            >
+                              删除
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -374,7 +520,7 @@ export function AssetsSettings({
                   <div 
                     key={file.path} 
                     className={`
-                      border rounded p-1 cursor-pointer hover:border-primary
+                      relative border rounded p-1 cursor-pointer hover:border-primary
                       ${selectedBackgroundFile === file.path ? 'border-primary border-2' : 'border-gray-200'}
                     `}
                     onClick={() => handleBackgroundFileChange(file.path)}
@@ -385,6 +531,41 @@ export function AssetsSettings({
                       className="w-full h-20 object-cover rounded"
                     />
                     <p className="text-xs text-center mt-1 truncate">{file.name}</p>
+                    
+                    {canDeleteFile(file.path, 'background') && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-1 right-1 h-6 w-6 bg-white rounded-full opacity-70 hover:opacity-100"
+                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                            disabled={deleteLoading === file.path}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>确认删除</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              确定要删除背景图片 "{file.name}" 吗？此操作无法撤销。
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>取消</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                handleDeleteBackground(file.path);
+                              }}
+                            >
+                              删除
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
                   </div>
                 ))}
               </div>

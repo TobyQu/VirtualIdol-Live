@@ -1,9 +1,10 @@
-import { Form, FormField, FormItem, FormControl, FormLabel } from "@/components/ui/form"
+import { Form, FormField, FormItem, FormControl } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { GlobalConfig } from "@/features/config/configApi"
 import { UseFormReturn } from "react-hook-form"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 type MemorySettingsProps = {
   globalConfig: GlobalConfig
@@ -17,61 +18,66 @@ export function MemorySettings({
   form
 }: MemorySettingsProps) {
   return (
-    <Form {...form}>
-      <div className="grid gap-6">
-        {/* 长期记忆设置 */}
-        <div className="space-y-4">
-          <div className="pb-2 border-b">
-            <h4 className="text-sm font-medium text-foreground/90">长期记忆设置</h4>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">长期记忆设置</CardTitle>
+          <CardDescription>配置角色的长期记忆存储功能</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <FormField
+              control={form.control}
+              name="enableLongMemory"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <RadioGroup
+                      value={globalConfig?.memoryStorageConfig?.enableLongMemory ? "true" : "false"}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        onChangeGlobalConfig({
+                          ...globalConfig,
+                          memoryStorageConfig: {
+                            ...globalConfig?.memoryStorageConfig,
+                            enableLongMemory: value === "true"
+                          }
+                        });
+                      }}
+                      className="flex space-x-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="true" id="enable-memory" />
+                        <Label htmlFor="enable-memory">开启</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="false" id="disable-memory" />
+                        <Label htmlFor="disable-memory">关闭</Label>
+                      </div>
+                    </RadioGroup>
+                  </FormControl>
+                </FormItem>
+              )}
+            />
           </div>
-          <FormField
-            control={form.control}
-            name="enableLongMemory"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <RadioGroup
-                    value={globalConfig?.memoryStorageConfig?.enableLongMemory ? "true" : "false"}
-                    onValueChange={(value) => {
-                      field.onChange(value);
-                      onChangeGlobalConfig({
-                        ...globalConfig,
-                        memoryStorageConfig: {
-                          ...globalConfig?.memoryStorageConfig,
-                          enableLongMemory: value === "true"
-                        }
-                      });
-                    }}
-                    className="flex space-x-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="true" id="enable-memory" />
-                      <Label htmlFor="enable-memory">开启</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="false" id="disable-memory" />
-                      <Label htmlFor="disable-memory">关闭</Label>
-                    </div>
-                  </RadioGroup>
-                </FormControl>
-              </FormItem>
-            )}
-          />
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Milvus 配置 */}
-        {globalConfig?.memoryStorageConfig?.enableLongMemory && (
-          <div className="space-y-4">
-            <div className="pb-2 border-b">
-              <h4 className="text-sm font-medium text-foreground/90">Milvus 配置</h4>
-            </div>
-            <div className="grid gap-4">
+      {/* Milvus 配置 */}
+      {globalConfig?.memoryStorageConfig?.enableLongMemory && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Milvus 向量数据库配置</CardTitle>
+            <CardDescription>配置Milvus向量数据库连接参数</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
               <FormField
                 control={form.control}
                 name="milvusHost"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-medium text-foreground/70">Host</FormLabel>
+                    <Label className="text-xs font-medium text-foreground/70">Host</Label>
                     <FormControl>
                       <Input
                         {...field}
@@ -101,7 +107,7 @@ export function MemorySettings({
                 name="milvusPort"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-medium text-foreground/70">Port</FormLabel>
+                    <Label className="text-xs font-medium text-foreground/70">端口</Label>
                     <FormControl>
                       <Input
                         {...field}
@@ -131,7 +137,7 @@ export function MemorySettings({
                 name="milvusUser"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-medium text-foreground/70">User</FormLabel>
+                    <Label className="text-xs font-medium text-foreground/70">用户名</Label>
                     <FormControl>
                       <Input
                         {...field}
@@ -161,7 +167,7 @@ export function MemorySettings({
                 name="milvusPassword"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-medium text-foreground/70">Password</FormLabel>
+                    <Label className="text-xs font-medium text-foreground/70">密码</Label>
                     <FormControl>
                       <Input
                         {...field}
@@ -191,7 +197,7 @@ export function MemorySettings({
                 name="milvusDbName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-medium text-foreground/70">Database</FormLabel>
+                    <Label className="text-xs font-medium text-foreground/70">数据库名称</Label>
                     <FormControl>
                       <Input
                         {...field}
@@ -217,9 +223,9 @@ export function MemorySettings({
                 )}
               />
             </div>
-          </div>
-        )}
-      </div>
-    </Form>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   )
 } 
