@@ -10,10 +10,10 @@ from django.views.decorators.csrf import csrf_exempt
 
 from .character import role_package_manage
 from .insight.bilibili_api.bili_live_client import lazy_bilibili_live
-from .process import process_core
+from .process import get_process_core
 from .serializers import CustomRoleSerializer, UploadedImageSerializer, UploadedVrmModelSerializer, \
     UploadedRolePackageModelSerializer
-from .config import singleton_sys_config
+from .config import get_sys_config
 from .config.sys_config import sys_code
 from .models import CustomRoleModel, BackgroundImageModel, VrmModel, RolePackageModel, SysConfigModel
 import logging
@@ -34,7 +34,7 @@ def chat(request):
         you_name = data["you_name"]
         logger.info(f"收到聊天请求: query={query}, you_name={you_name}")
         
-        process_core.chat(you_name=you_name, query=query)
+        get_process_core().chat(you_name=you_name, query=query)
         
         return Response({
             "code": 0,  # 修改为0以与其他API保持一致
@@ -91,7 +91,7 @@ def save_config(request):
             logger.info("新配置已成功创建")
             
         # 更新单例配置
-        singleton_sys_config.load()
+        get_sys_config()
         
         # 从数据库中读取并打印，确认保存是否成功
         try:
@@ -135,22 +135,45 @@ def get_config(request):
     try:
         config = SysConfigModel.objects.first()
         if config:
-            return Response({
-                'code': 0,
-                'message': 'success',
-                'data': {
-                    'config': config.config
-                }
-            })
+            # 检查配置是否为空或无效JSON
+            try:
+                json_config = json.loads(config.config)
+                if not json_config:  # 空字典
+                    logger.warning("配置存在但为空，返回默认配置")
+                    return Response({
+                        'code': 0,
+                        'message': 'success',
+                        'data': {
+                            'config': """{"characterConfig": {"character": 1, "character_name": "爱莉", "yourName": "用户", "vrmModel": "/assets/vrm/default.vrm", "vrmModelType": "system"}, "languageModelConfig": {"openai": {"OPENAI_API_KEY": "", "OPENAI_BASE_URL": ""}, "ollama": {"OLLAMA_API_BASE": "http://localhost:11434", "OLLAMA_API_MODEL_NAME": "qwen:7b"}, "zhipuai": {"ZHIPUAI_API_KEY": "SK-"}}, "enableProxy": false, "httpProxy": "http://host.docker.internal:23457", "httpsProxy": "https://host.docker.internal:23457", "socks5Proxy": "socks5://host.docker.internal:23457", "conversationConfig": {"conversationType": "default", "languageModel": "openai"}, "memoryStorageConfig": {"zep_memory": {"zep_url": "http://localhost:8881", "zep_optional_api_key": "optional_api_key"}, "milvusMemory": {"host": "127.0.0.1", "port": "19530", "user": "user", "password": "Milvus", "dbName": "default"}, "enableLongMemory": false, "enableSummary": false, "languageModelForSummary": "openai", "enableReflection": false, "languageModelForReflection": "openai"}, "background_url": "/assets/backgrounds/default.png", "enableLive": false, "liveStreamingConfig": {"B_ROOM_ID": "", "B_COOKIE": ""}, "ttsConfig": {"ttsVoiceId": "female-shaonv", "emotion": "neutral", "ttsType": "minimax"}}"""
+                        }
+                    })
+                return Response({
+                    'code': 0,
+                    'message': 'success',
+                    'data': {
+                        'config': config.config
+                    }
+                })
+            except json.JSONDecodeError:
+                logger.warning("配置存在但不是有效的JSON，返回默认配置")
+                return Response({
+                    'code': 0,
+                    'message': 'success',
+                    'data': {
+                        'config': """{"characterConfig": {"character": 1, "character_name": "爱莉", "yourName": "用户", "vrmModel": "/assets/vrm/default.vrm", "vrmModelType": "system"}, "languageModelConfig": {"openai": {"OPENAI_API_KEY": "", "OPENAI_BASE_URL": ""}, "ollama": {"OLLAMA_API_BASE": "http://localhost:11434", "OLLAMA_API_MODEL_NAME": "qwen:7b"}, "zhipuai": {"ZHIPUAI_API_KEY": "SK-"}}, "enableProxy": false, "httpProxy": "http://host.docker.internal:23457", "httpsProxy": "https://host.docker.internal:23457", "socks5Proxy": "socks5://host.docker.internal:23457", "conversationConfig": {"conversationType": "default", "languageModel": "openai"}, "memoryStorageConfig": {"zep_memory": {"zep_url": "http://localhost:8881", "zep_optional_api_key": "optional_api_key"}, "milvusMemory": {"host": "127.0.0.1", "port": "19530", "user": "user", "password": "Milvus", "dbName": "default"}, "enableLongMemory": false, "enableSummary": false, "languageModelForSummary": "openai", "enableReflection": false, "languageModelForReflection": "openai"}, "background_url": "/assets/backgrounds/default.png", "enableLive": false, "liveStreamingConfig": {"B_ROOM_ID": "", "B_COOKIE": ""}, "ttsConfig": {"ttsVoiceId": "female-shaonv", "emotion": "neutral", "ttsType": "minimax"}}"""
+                    }
+                })
         else:
+            logger.info("配置不存在，返回默认配置")
             return Response({
                 'code': 0,
                 'message': 'success',
                 'data': {
-                    'config': '{}'
+                    'config': """{"characterConfig": {"character": 1, "character_name": "爱莉", "yourName": "用户", "vrmModel": "/assets/vrm/default.vrm", "vrmModelType": "system"}, "languageModelConfig": {"openai": {"OPENAI_API_KEY": "", "OPENAI_BASE_URL": ""}, "ollama": {"OLLAMA_API_BASE": "http://localhost:11434", "OLLAMA_API_MODEL_NAME": "qwen:7b"}, "zhipuai": {"ZHIPUAI_API_KEY": "SK-"}}, "enableProxy": false, "httpProxy": "http://host.docker.internal:23457", "httpsProxy": "https://host.docker.internal:23457", "socks5Proxy": "socks5://host.docker.internal:23457", "conversationConfig": {"conversationType": "default", "languageModel": "openai"}, "memoryStorageConfig": {"zep_memory": {"zep_url": "http://localhost:8881", "zep_optional_api_key": "optional_api_key"}, "milvusMemory": {"host": "127.0.0.1", "port": "19530", "user": "user", "password": "Milvus", "dbName": "default"}, "enableLongMemory": false, "enableSummary": false, "languageModelForSummary": "openai", "enableReflection": false, "languageModelForReflection": "openai"}, "background_url": "/assets/backgrounds/default.png", "enableLive": false, "liveStreamingConfig": {"B_ROOM_ID": "", "B_COOKIE": ""}, "ttsConfig": {"ttsVoiceId": "female-shaonv", "emotion": "neutral", "ttsType": "minimax"}}"""
                 }
             })
     except Exception as e:
+        logger.error(f"获取配置时出错: {str(e)}", exc_info=True)
         return Response({
             'code': 500,
             'message': str(e),
@@ -179,7 +202,7 @@ def clear_memory(request):
       删除测试记忆
     :return:
     '''
-    result = singleton_sys_config.memory_storage_driver.clear("alan")
+    result = get_sys_config().memory_storage_driver.clear("alan")
     return Response({"response": result, "code": "200"})
 
 

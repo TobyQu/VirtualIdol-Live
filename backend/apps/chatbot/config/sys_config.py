@@ -147,7 +147,6 @@ class SysConfig:
             raise e
 
     def load(self):
-
         logger.debug(
             "======================== Load SysConfig ========================")
 
@@ -155,88 +154,117 @@ class SysConfig:
 
         os.environ['TOKENIZERS_PARALLELISM'] = "false"
 
-        # 初始化默认角色
+        # 初始化默认角色 - 使用延迟初始化和错误处理
         try:
-            result = CustomRoleModel.objects.all()
-            if len(result) == 0:
-                logger.debug("=> load default character")
-                custom_role = CustomRoleModel(
-                    role_name=aili_zh.role_name,
-                    persona=aili_zh.persona,
-                    personality=aili_zh.personality,
-                    scenario=aili_zh.scenario,
-                    examples_of_dialogue=aili_zh.examples_of_dialogue,
-                    custom_role_template_type=aili_zh.custom_role_template_type,
-                    role_package_id=-1
-                )
-                custom_role.save()
-                logger.info(f"已创建默认角色: ID={custom_role.id}, 名称={custom_role.role_name}")
-        except Exception as e:
-            logger.error("=> load default character ERROR: %s" % str(e))
+            from django.db.utils import OperationalError, ProgrammingError
+            from django.db import connection
 
-        # 加载角色配置
-        try:
-            character = sys_config_json["characterConfig"]["character"]
-            yourName = sys_config_json["characterConfig"]["yourName"]
-            character_name = sys_config_json["characterConfig"]["character_name"]
-            
-            # 验证角色ID是否存在
-            try:
-                from django.core.exceptions import ObjectDoesNotExist
-                CustomRoleModel.objects.get(pk=character)
-                logger.debug(f"已验证角色ID {character} 存在")
-            except ObjectDoesNotExist:
-                # 获取第一个可用角色
-                try:
-                    first_role = CustomRoleModel.objects.first()
-                    if first_role:
-                        character = first_role.id
-                        character_name = first_role.role_name
-                        logger.warning(f"配置中的角色ID {character} 不存在，已切换到第一个可用角色: ID={first_role.id}, 名称={first_role.role_name}")
-                    else:
-                        logger.error("没有可用角色，将重新创建默认角色")
-                        custom_role = CustomRoleModel(
-                            role_name=aili_zh.role_name,
-                            persona=aili_zh.persona,
-                            personality=aili_zh.personality,
-                            scenario=aili_zh.scenario,
-                            examples_of_dialogue=aili_zh.examples_of_dialogue,
-                            custom_role_template_type=aili_zh.custom_role_template_type,
-                            role_package_id=-1
-                        )
-                        custom_role.save()
-                        character = custom_role.id
-                        character_name = custom_role.role_name
-                        logger.info(f"已创建并使用默认角色: ID={custom_role.id}, 名称={custom_role.role_name}")
-                except Exception as role_err:
-                    logger.error(f"获取可用角色失败: {str(role_err)}")
-            
-        except KeyError:
-            # 如果配置项不存在，使用默认值
-            logger.error("characterConfig不存在或不完整，使用默认值")
-            # 尝试获取第一个可用角色
-            try:
-                first_role = CustomRoleModel.objects.first()
-                if first_role:
-                    character = first_role.id
-                    character_name = first_role.role_name
-                else:
-                    character = 1
-                    character_name = "爱莉"
-            except Exception:
+            # 检查数据库表是否存在
+            tables = connection.introspection.table_names()
+            if 'apps_customrolemodel' not in tables:
+                logger.warning("表 'apps_customrolemodel' 不存在，跳过角色初始化")
                 character = 1
                 character_name = "爱莉"
-                
+                yourName = "用户"
+            else:
+                result = CustomRoleModel.objects.all()
+                if len(result) == 0:
+                    logger.debug("=> load default character")
+                    custom_role = CustomRoleModel(
+                        role_name=aili_zh.role_name,
+                        persona=aili_zh.persona,
+                        personality=aili_zh.personality,
+                        scenario=aili_zh.scenario,
+                        examples_of_dialogue=aili_zh.examples_of_dialogue,
+                        custom_role_template_type=aili_zh.custom_role_template_type,
+                        role_package_id=-1
+                    )
+                    custom_role.save()
+                    logger.info(f"已创建默认角色: ID={custom_role.id}, 名称={custom_role.role_name}")
+                    character = custom_role.id
+                    character_name = custom_role.role_name
+                else:
+                    # 加载角色配置
+                    try:
+                        character = sys_config_json["characterConfig"]["character"]
+                        yourName = sys_config_json["characterConfig"]["yourName"]
+                        character_name = sys_config_json["characterConfig"]["character_name"]
+                        
+                        # 验证角色ID是否存在
+                        try:
+                            from django.core.exceptions import ObjectDoesNotExist
+                            CustomRoleModel.objects.get(pk=character)
+                            logger.debug(f"已验证角色ID {character} 存在")
+                        except ObjectDoesNotExist:
+                            # 获取第一个可用角色
+                            try:
+                                first_role = CustomRoleModel.objects.first()
+                                if first_role:
+                                    character = first_role.id
+                                    character_name = first_role.role_name
+                                    logger.warning(f"配置中的角色ID {character} 不存在，已切换到第一个可用角色: ID={first_role.id}, 名称={first_role.role_name}")
+                                else:
+                                    logger.error("没有可用角色，将重新创建默认角色")
+                                    custom_role = CustomRoleModel(
+                                        role_name=aili_zh.role_name,
+                                        persona=aili_zh.persona,
+                                        personality=aili_zh.personality,
+                                        scenario=aili_zh.scenario,
+                                        examples_of_dialogue=aili_zh.examples_of_dialogue,
+                                        custom_role_template_type=aili_zh.custom_role_template_type,
+                                        role_package_id=-1
+                                    )
+                                    custom_role.save()
+                                    character = custom_role.id
+                                    character_name = custom_role.role_name
+                                    logger.info(f"已创建并使用默认角色: ID={custom_role.id}, 名称={custom_role.role_name}")
+                            except Exception as role_err:
+                                logger.error(f"获取可用角色失败: {str(role_err)}")
+                                character = 1
+                                character_name = "爱莉"
+                        
+                    except KeyError:
+                        # 如果配置项不存在，使用默认值
+                        logger.error("characterConfig不存在或不完整，使用默认值")
+                        # 尝试获取第一个可用角色
+                        try:
+                            first_role = CustomRoleModel.objects.first()
+                            if first_role:
+                                character = first_role.id
+                                character_name = first_role.role_name
+                            else:
+                                character = 1
+                                character_name = "爱莉"
+                        except Exception:
+                            character = 1
+                            character_name = "爱莉"
+                            
+                        yourName = "用户"
+        except (OperationalError, ProgrammingError) as db_err:
+            logger.warning(f"数据库表访问错误，使用默认配置: {str(db_err)}")
+            character = 1
+            character_name = "爱莉"
             yourName = "用户"
-            
-            # 创建默认配置以便保存
-            if "characterConfig" not in sys_config_json:
-                sys_config_json["characterConfig"] = {}
-            sys_config_json["characterConfig"]["character"] = character
-            sys_config_json["characterConfig"]["yourName"] = yourName
-            sys_config_json["characterConfig"]["character_name"] = character_name
-            # 保存更新后的配置
+        except Exception as e:
+            logger.error(f"=> load default character ERROR: {str(e)}")
+            character = 1
+            character_name = "爱莉"
+            yourName = "用户"
+
+        # 确保配置字典包含必要的键
+        if "characterConfig" not in sys_config_json:
+            sys_config_json["characterConfig"] = {}
+        
+        # 更新配置
+        sys_config_json["characterConfig"]["character"] = character
+        sys_config_json["characterConfig"]["yourName"] = yourName
+        sys_config_json["characterConfig"]["character_name"] = character_name
+        
+        # 保存更新后的配置，但仅当表存在时才尝试保存到数据库
+        try:
             self.save(sys_config_json)
+        except Exception as save_err:
+            logger.warning(f"保存配置失败，将在下次启动时重试: {str(save_err)}")
             
         logger.debug("=> character Config")
         logger.debug(f"character:{character}")

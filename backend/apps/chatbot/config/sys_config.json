@@ -1,12 +1,14 @@
 {
   "characterConfig": {
-    "character": 2,
+    "character": 1,
     "character_name": "爱莉",
-    "yourName": "用户"
+    "yourName": "用户",
+    "vrmModel": "/assets/vrm/default.vrm",
+    "vrmModelType": "system"
   },
   "languageModelConfig": {
     "openai": {
-      "OPENAI_API_KEY": "sk-",
+      "OPENAI_API_KEY": "",
       "OPENAI_BASE_URL": ""
     },
     "ollama": {
@@ -42,5 +44,16 @@
     "languageModelForSummary": "openai",
     "enableReflection": false,
     "languageModelForReflection": "openai"
+  },
+  "background_url": "/assets/backgrounds/default.png",
+  "enableLive": false,
+  "liveStreamingConfig": {
+    "B_ROOM_ID": "",
+    "B_COOKIE": ""
+  },
+  "ttsConfig": {
+    "ttsVoiceId": "female-shaonv",
+    "emotion": "neutral",
+    "ttsType": "minimax"
   }
 }
