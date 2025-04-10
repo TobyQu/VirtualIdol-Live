@@ -37,7 +37,7 @@ import { Card, CardContent } from "./ui/card"
 
 const llm_enums = ["openai", "ollama", 'zhipuai'];
 
-type FormValues = {
+export type SettingsFormValues = {
   proxyEnabled: boolean
   liveEnabled: boolean
   httpProxy: string
@@ -56,12 +56,12 @@ type FormValues = {
   zhipuaiApiKey: string
   ollamaApiBase: string
   ollamaModelName: string
-  enableLongMemory: boolean
-  milvusHost: string
-  milvusPort: string
-  milvusUser: string
-  milvusPassword: string
-  milvusDbName: string
+  enableLongMemory: string
+  enableSummary: string
+  enableReflection: string
+  languageModelForSummary: string
+  languageModelForReflection: string
+  faissDataDir: string
   persona: string
   personality: string
   scenario: string
@@ -385,14 +385,14 @@ export function SettingsSheet({
           },
           memoryStorageConfig: {
             ...globalConfig.memoryStorageConfig,
-            enableLongMemory: values.enableLongMemory,
-            milvusMemory: {
-              ...globalConfig.memoryStorageConfig.milvusMemory,
-              host: values.milvusHost,
-              port: values.milvusPort,
-              user: values.milvusUser,
-              password: values.milvusPassword,
-              dbName: values.milvusDbName,
+            enableLongMemory: values.enableLongMemory === "true",
+            enableSummary: values.enableSummary === "true",
+            enableReflection: values.enableReflection === "true",
+            languageModelForSummary: values.languageModelForSummary,
+            languageModelForReflection: values.languageModelForReflection,
+            faissMemory: {
+              ...globalConfig.memoryStorageConfig.faissMemory,
+              dataDir: values.faissDataDir,
             },
           },
           ttsConfig: {
@@ -426,7 +426,7 @@ export function SettingsSheet({
     }
   };
 
-  const form = useForm<FormValues>({
+  const form = useForm<SettingsFormValues>({
     defaultValues: {
       proxyEnabled: globalConfig?.enableProxy || false,
       liveEnabled: globalConfig?.enableLive || false,
@@ -446,12 +446,12 @@ export function SettingsSheet({
       zhipuaiApiKey: globalConfig?.languageModelConfig?.zhipuai?.ZHIPUAI_API_KEY || "",
       ollamaApiBase: globalConfig?.languageModelConfig?.ollama?.OLLAMA_API_BASE || "",
       ollamaModelName: globalConfig?.languageModelConfig?.ollama?.OLLAMA_API_MODEL_NAME || "",
-      enableLongMemory: globalConfig?.memoryStorageConfig?.enableLongMemory || false,
-      milvusHost: globalConfig?.memoryStorageConfig?.milvusMemory?.host || "",
-      milvusPort: globalConfig?.memoryStorageConfig?.milvusMemory?.port || "",
-      milvusUser: globalConfig?.memoryStorageConfig?.milvusMemory?.user || "",
-      milvusPassword: globalConfig?.memoryStorageConfig?.milvusMemory?.password || "",
-      milvusDbName: globalConfig?.memoryStorageConfig?.milvusMemory?.dbName || "",
+      enableLongMemory: globalConfig?.memoryStorageConfig?.enableLongMemory ? "true" : "false",
+      enableSummary: globalConfig?.memoryStorageConfig?.enableSummary ? "true" : "false",
+      enableReflection: globalConfig?.memoryStorageConfig?.enableReflection ? "true" : "false",
+      languageModelForSummary: globalConfig?.memoryStorageConfig?.languageModelForSummary || "openai",
+      languageModelForReflection: globalConfig?.memoryStorageConfig?.languageModelForReflection || "openai",
+      faissDataDir: globalConfig?.memoryStorageConfig?.faissMemory?.dataDir || "storage/memory",
       persona: customRole?.persona || "",
       personality: customRole?.personality || "",
       scenario: customRole?.scenario || "",

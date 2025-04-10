@@ -3,7 +3,7 @@ import logging
 import traceback
 
 from ..config.sys_config import SysConfig
-from .milvus.milvus_storage_impl import MilvusStorage
+from .faiss.faiss_storage_impl import FAISSStorage
 from .local.local_storage_impl import LocalStorage
 from ..utils.snowflake_utils import SnowFlake
 from typing import Any, Dict, List
@@ -14,14 +14,14 @@ logger = logging.getLogger(__name__)
 class MemoryStorageDriver:
     sys_config: SysConfig
     short_memory_storage: LocalStorage
-    long_memory_storage: MilvusStorage
+    long_memory_storage: FAISSStorage
     snow_flake: SnowFlake = SnowFlake(data_center_id=5, worker_id=5)
 
     def __init__(self, memory_storage_config: dict[str, str], sys_config: SysConfig) -> None:
         self.sys_config = sys_config
         self.short_memory_storage = LocalStorage(memory_storage_config)
         if sys_config.enable_longMemory:
-            self.long_memory_storage = MilvusStorage(memory_storage_config)
+            self.long_memory_storage = FAISSStorage(memory_storage_config)
 
     def search_short_memory(self, query_text: str, you_name: str, role_name: str) -> list[Dict[str, str]]:
         local_memory = self.short_memory_storage.pageQuery(

@@ -63,36 +63,37 @@ export function MemorySettings({
         </CardContent>
       </Card>
 
-      {/* Milvus 配置 */}
+      {/* FAISS 配置 */}
       {globalConfig?.memoryStorageConfig?.enableLongMemory && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Milvus 向量数据库配置</CardTitle>
-            <CardDescription>配置Milvus向量数据库连接参数</CardDescription>
+            <CardTitle className="text-base">FAISS 本地向量存储配置</CardTitle>
+            <CardDescription>配置FAISS向量存储参数</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <FormField
                 control={form.control}
-                name="milvusHost"
+                name="faissDataDir"
                 render={({ field }) => (
                   <FormItem>
-                    <Label className="text-xs font-medium text-foreground/70">Host</Label>
+                    <Label className="text-xs font-medium text-foreground/70">数据存储目录</Label>
                     <FormControl>
                       <Input
                         {...field}
                         className="w-full"
                         type="text"
-                        value={globalConfig?.memoryStorageConfig?.milvusMemory?.host || ""}
+                        placeholder="storage/memory"
+                        value={globalConfig?.memoryStorageConfig?.faissMemory?.dataDir || "storage/memory"}
                         onChange={(e) => {
                           field.onChange(e);
                           onChangeGlobalConfig({
                             ...globalConfig,
                             memoryStorageConfig: {
                               ...globalConfig?.memoryStorageConfig,
-                              milvusMemory: {
-                                ...globalConfig?.memoryStorageConfig?.milvusMemory,
-                                host: e.target.value
+                              faissMemory: {
+                                ...globalConfig?.memoryStorageConfig?.faissMemory,
+                                dataDir: e.target.value
                               }
                             }
                           });
@@ -102,126 +103,10 @@ export function MemorySettings({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="milvusPort"
-                render={({ field }) => (
-                  <FormItem>
-                    <Label className="text-xs font-medium text-foreground/70">端口</Label>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        className="w-full"
-                        type="text"
-                        value={globalConfig?.memoryStorageConfig?.milvusMemory?.port || ""}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          onChangeGlobalConfig({
-                            ...globalConfig,
-                            memoryStorageConfig: {
-                              ...globalConfig?.memoryStorageConfig,
-                              milvusMemory: {
-                                ...globalConfig?.memoryStorageConfig?.milvusMemory,
-                                port: e.target.value
-                              }
-                            }
-                          });
-                        }}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="milvusUser"
-                render={({ field }) => (
-                  <FormItem>
-                    <Label className="text-xs font-medium text-foreground/70">用户名</Label>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        className="w-full"
-                        type="text"
-                        value={globalConfig?.memoryStorageConfig?.milvusMemory?.user || ""}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          onChangeGlobalConfig({
-                            ...globalConfig,
-                            memoryStorageConfig: {
-                              ...globalConfig?.memoryStorageConfig,
-                              milvusMemory: {
-                                ...globalConfig?.memoryStorageConfig?.milvusMemory,
-                                user: e.target.value
-                              }
-                            }
-                          });
-                        }}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="milvusPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <Label className="text-xs font-medium text-foreground/70">密码</Label>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        className="w-full"
-                        type="password"
-                        value={globalConfig?.memoryStorageConfig?.milvusMemory?.password || ""}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          onChangeGlobalConfig({
-                            ...globalConfig,
-                            memoryStorageConfig: {
-                              ...globalConfig?.memoryStorageConfig,
-                              milvusMemory: {
-                                ...globalConfig?.memoryStorageConfig?.milvusMemory,
-                                password: e.target.value
-                              }
-                            }
-                          });
-                        }}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="milvusDbName"
-                render={({ field }) => (
-                  <FormItem>
-                    <Label className="text-xs font-medium text-foreground/70">数据库名称</Label>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        className="w-full"
-                        type="text"
-                        value={globalConfig?.memoryStorageConfig?.milvusMemory?.dbName || ""}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          onChangeGlobalConfig({
-                            ...globalConfig,
-                            memoryStorageConfig: {
-                              ...globalConfig?.memoryStorageConfig,
-                              milvusMemory: {
-                                ...globalConfig?.memoryStorageConfig?.milvusMemory,
-                                dbName: e.target.value
-                              }
-                            }
-                          });
-                        }}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+              <div className="text-xs mt-2 text-muted-foreground">
+                <p>FAISS是一个轻量级本地向量存储，无需额外服务器支持，适合客户端应用。</p>
+                <p>数据将存储在您指定的本地目录中，确保应用有足够的写入权限。</p>
+              </div>
             </div>
           </CardContent>
         </Card>

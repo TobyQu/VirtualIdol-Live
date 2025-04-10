@@ -19,11 +19,7 @@ def lazy_memory_storage(sys_config_json: any, sys_cofnig: any):
     try:
         # 加载记忆模块配置
         memory_storage_config = {
-            "host": sys_config_json["memoryStorageConfig"]["milvusMemory"]["host"],
-            "port": sys_config_json["memoryStorageConfig"]["milvusMemory"]["port"],
-            "user": sys_config_json["memoryStorageConfig"]["milvusMemory"]["user"],
-            "password": sys_config_json["memoryStorageConfig"]["milvusMemory"]["password"],
-            "db_name": sys_config_json["memoryStorageConfig"]["milvusMemory"]["dbName"],
+            "data_dir": sys_config_json.get("memoryStorageConfig", {}).get("faissMemory", {}).get("dataDir", "storage/memory"),
         }
         logger.debug(f"=> memory_storage_config:{memory_storage_config}")
         # 加载记忆模块驱动
@@ -32,11 +28,7 @@ def lazy_memory_storage(sys_config_json: any, sys_cofnig: any):
         logger.error(f"记忆模块配置不完整: {str(e)}")
         # 使用默认配置
         default_memory_storage_config = {
-            "host": "127.0.0.1",
-            "port": "19530",
-            "user": "user",
-            "password": "Milvus",
-            "db_name": "default"
+            "data_dir": "storage/memory"
         }
         logger.debug(f"=> 使用默认memory_storage_config:{default_memory_storage_config}")
         return MemoryStorageDriver(memory_storage_config=default_memory_storage_config, sys_config=sys_cofnig)
@@ -399,12 +391,8 @@ class SysConfig:
                         "zep_url": "http://localhost:8881",
                         "zep_optional_api_key": "optional_api_key"
                     },
-                    "milvusMemory": {
-                        "host": "127.0.0.1",
-                        "port": "19530",
-                        "user": "user",
-                        "password": "Milvus",
-                        "dbName": "default"
+                    "faissMemory": {
+                        "dataDir": "storage/memory"
                     },
                     "enableLongMemory": False,
                     "enableSummary": False,

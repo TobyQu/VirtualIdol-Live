@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     'channels',
     'corsheaders',
     'apps',
+    'apps.chatbot',
+    'apps.speech',
 ]
 
 REST_FRAMEWORK = {

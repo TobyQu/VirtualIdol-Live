@@ -1,11 +1,7 @@
 import {getRequest, postRequest} from "../httpclient/httpclient";
 
-export interface MilvusMemoryConfig {
-    host: string;
-    port: string;
-    user: string;
-    password: string;
-    dbName: string;
+export interface FAISSMemoryConfig {
+    dataDir: string;
 }
 
 export interface ZepMemoryConfig {
@@ -19,7 +15,7 @@ export interface MemoryStorageConfig {
     enableReflection: boolean;
     languageModelForSummary: string;
     languageModelForReflection: string;
-    milvusMemory: MilvusMemoryConfig;
+    faissMemory: FAISSMemoryConfig;
     zep_memory: ZepMemoryConfig;
 }
 
@@ -120,12 +116,8 @@ export const initialFormData = {
         "languageModel": "openai"
     },
     "memoryStorageConfig": {
-        "milvusMemory": {
-            "host": "127.0.0.1",
-            "port": "19530",
-            "user": "user",
-            "password": "Milvus",
-            "dbName": "default"
+        "faissMemory": {
+            "dataDir": "storage/memory"
         },
         "zep_memory": {
             "zep_url": "http://localhost:8881",

@@ -8,8 +8,8 @@
   },
   "languageModelConfig": {
     "openai": {
-      "OPENAI_API_KEY": "",
-      "OPENAI_BASE_URL": ""
+      "OPENAI_API_KEY": "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",
+      "OPENAI_BASE_URL": "https://api.openai.com/v1"
     },
     "ollama": {
       "OLLAMA_API_BASE": "http://localhost:11434",
@@ -39,11 +39,14 @@
       "password": "Milvus",
       "dbName": "default"
     },
-    "enableLongMemory": false,
+    "enableLongMemory": true,
     "enableSummary": false,
     "languageModelForSummary": "openai",
     "enableReflection": false,
-    "languageModelForReflection": "openai"
+    "languageModelForReflection": "openai",
+    "faissMemory": {
+      "dataDir": "storage/memory"
+    }
   },
   "background_url": "/assets/backgrounds/default.png",
   "enableLive": false,

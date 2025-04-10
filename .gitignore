@@ -311,3 +311,6 @@ temp/
 .gitignore
 .github/
 .gitlab/
+
+# FAISS向量存储数据
+/backend/storage/
