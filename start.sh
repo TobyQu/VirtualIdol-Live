@@ -53,38 +53,6 @@ setup_conda_env() {
     return 0
 }
 
-# 初始化conda函数 - 使用用户提供的脚本
-init_conda() {
-    print_message "初始化conda环境..."
-    
-    # >>> conda initialize >>>
-    # !! Contents within this block are managed by 'conda init' !!
-    __conda_setup="$('/opt/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
-    if [ $? -eq 0 ]; then
-        eval "$__conda_setup"
-    else
-        if [ -f "/opt/miniconda3/etc/profile.d/conda.sh" ]; then
-            . "/opt/miniconda3/etc/profile.d/conda.sh"
-        else
-            export PATH="/opt/miniconda3/bin:$PATH"
-        fi
-    fi
-    unset __conda_setup
-    # <<< conda initialize <<<
-    
-    # 确认conda命令可用
-    if ! command -v conda &> /dev/null; then
-        print_error "conda初始化失败"
-        return 1
-    fi
-    
-    # 运行conda init以确保可以使用conda activate
-    conda init bash
-    
-    print_message "conda初始化成功"
-    return 0
-}
-
 # 检查服务是否可用
 check_service() {
     local url=$1
@@ -243,17 +211,8 @@ main() {
             exit 1
         }
     else
-        # conda命令不可用，尝试初始化
-        init_conda || {
-            print_error "初始化conda环境失败"
-            exit 1
-        }
-        
-        # 初始化成功后，设置环境
-        setup_conda_env || {
-            print_error "设置conda环境失败"
-            exit 1
-        }
+        print_error "conda命令不可用，请先安装conda"
+        exit 1
     fi
     
     # 检查环境要求
