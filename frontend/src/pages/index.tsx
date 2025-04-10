@@ -1,4 +1,4 @@
-import {createContext, useCallback, useContext, useEffect, useRef, useState} from "react";
+import {createContext, useCallback, useContext, useEffect, useRef, useState, memo} from "react";
 import VrmViewer from "@/components/vrmViewer";
 import {ViewerContext} from "@/features/vrmViewer/viewerContext";
 import {EmotionType, Message, Screenplay, textsToScreenplay,} from "@/features/messages/messages";
@@ -22,6 +22,10 @@ import { LoadingSpinner } from "@/components/loading-spinner";
 import { DetachButton } from "@/components/detach-button";
 import { Button } from "@/components/ui/button";
 import { Maximize2 } from "lucide-react";
+import { SubtitleBubble } from "@/components/subtitle-bubble";
+import { WindowManagerProvider, useWindowManager } from "@/features/windowManager/windowContext";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import Head from "next/head";
 
 // 为Window对象添加isClosingAllowed属性
 declare global {
@@ -64,8 +68,76 @@ let bind_message_event = false;
 // 使用断言确保webGlobalConfig类型兼容
 let webGlobalConfig = initialFormData as unknown as GlobalConfig;
 
-export default function Home() {
+// AppContent组件接口定义
+interface AppContentProps {
+    isClient: boolean;
+    isLoading: boolean;
+    loadingStages: Array<{id: string; label: string; completed: boolean}>;
+    handleLoadingStateChange: (loading: boolean, stages: Array<{id: string; label: string; completed: boolean}>) => void;
+    globalConfig: GlobalConfig;
+    backgroundImageUrl: string;
+    subtitle: string;
+    currentEmote: string;
+    typingDelay: number;
+    openAiKey: string;
+    setOpenAiKey: (key: string) => void;
+    systemPrompt: string;
+    setSystemPrompt: (prompt: string) => void;
+    chatLog: Message[];
+    koeiroParam: KoeiroParam;
+    assistantMessage: string;
+    handleChangeChatLog: (targetIndex: number, text: string) => void;
+    setKoeiroParam: (param: KoeiroParam) => void;
+    onChangeGlobalConfig: (config: GlobalConfig) => void;
+    chatProcessing: boolean;
+    handleSendChat: (globalConfig: GlobalConfig, type: string, user_name: string, content: string) => Promise<void>;
+    setBackgroundImageUrl: (url: string) => void;
+    setChatLog: React.Dispatch<React.SetStateAction<Message[]>>;
+}
 
+// 创建稳定的VrmViewer包装组件
+const StableVrmViewer = memo(({ globalConfig, onLoadingStateChange }: {
+    globalConfig: GlobalConfig;
+    onLoadingStateChange: (loading: boolean, stages: Array<{id: string; label: string; completed: boolean}>) => void;
+}) => {
+    const { viewer } = useContext(ViewerContext);
+    
+    // 监听窗口大小变化
+    useEffect(() => {
+        if (!viewer) return;
+        
+        // 初始调整
+        viewer.resize();
+        
+        // 创建窗口大小变化处理函数
+        const handleResize = () => {
+            if (viewer) {
+                viewer.resize();
+            }
+        };
+        
+        // 添加窗口大小变化监听
+        window.addEventListener('resize', handleResize);
+        
+        // 清理函数
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [viewer]);
+    
+    return (
+        <VrmViewer 
+            globalConfig={globalConfig}
+            onLoadingStateChange={onLoadingStateChange}
+        />
+    );
+}, (prevProps, nextProps) => {
+    // 只有在globalConfig中的VRM模型真正变化时才重新渲染
+    return prevProps.globalConfig?.characterConfig?.vrmModel === nextProps.globalConfig?.characterConfig?.vrmModel;
+});
+
+// 主应用界面组件，包含WindowManagerProvider
+export default function Home() {
     const {viewer} = useContext(ViewerContext);
     const [systemPrompt, setSystemPrompt] = useState(SYSTEM_PROMPT);
     const [openAiKey, setOpenAiKey] = useState("");
@@ -76,20 +148,16 @@ export default function Home() {
     const [imageUrl, setImageUrl] = useState('');
     const [globalConfig, setGlobalConfig] = useState<GlobalConfig>(initialFormData);
     const [subtitle, setSubtitle] = useState("");
-    const [displayedSubtitle, setDisplayedSubtitle] = useState("");
     const [currentEmote, setCurrentEmote] = useState<string>("neutral");
     const [backgroundImageUrl, setBackgroundImageUrl] = useState<string>("/assets/backgrounds/bg-c.png");
     const [isClient, setIsClient] = useState(false);
     const [loadingStages, setLoadingStages] = useState<Array<{id: string; label: string; completed: boolean}>>([
         { id: 'background', label: '加载背景', completed: false },
-        { id: 'vrm', label: '加载3D模型', completed: false },
+        { id: 'vrm', label: '加载模型', completed: false },
         { id: 'animation', label: '加载动画', completed: false }
     ]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isDetached, setIsDetached] = useState(false);
-    const [chatWindow, setChatWindow] = useState<Window | null>(null);
     const typingDelay = 100; // 每个字的延迟时间，可以根据需要进行调整
-    const MAX_SUBTITLES = 100; // 增加字幕长度上限，以适应更多的文本
     
     // 处理加载状态变化
     const handleLoadingStateChange = useCallback((loading: boolean, stages: Array<{id: string; label: string; completed: boolean}>) => {
@@ -97,55 +165,6 @@ export default function Home() {
         setLoadingStages(stages);
     }, []);
     
-    const handleSubtitle = (newSubtitle: string) => {
-        setDisplayedSubtitle((prevSubtitle: string) => {
-            const updatedSubtitle = prevSubtitle + newSubtitle;
-            if (updatedSubtitle.length > MAX_SUBTITLES) {
-                // 如果超过最大字数，创建新的段落而不是截断
-                return updatedSubtitle.substring(updatedSubtitle.length - MAX_SUBTITLES);
-            }
-            return updatedSubtitle;
-        });
-    };
-
-    // 清除字幕，用于新对话开始前
-    const clearSubtitle = () => {
-        setDisplayedSubtitle("");
-    };
-    
-    // 分割长文本为多个部分
-    const splitTextIntoChunks = (text: string, maxLength: number = 60): string[] => {
-        if (text.length <= maxLength) return [text];
-        
-        const chunks: string[] = [];
-        // 尝试按标点符号分割
-        const sentences = text.match(/[^，。？！,.?!]+[，。？！,.?!]?/g) || [];
-        
-        let currentChunk = '';
-        for (const sentence of sentences) {
-            if (currentChunk.length + sentence.length <= maxLength) {
-                currentChunk += sentence;
-            } else {
-                if (currentChunk) chunks.push(currentChunk);
-                
-                // 处理特别长的句子
-                if (sentence.length > maxLength) {
-                    let tempSentence = sentence;
-                    while (tempSentence.length > maxLength) {
-                        chunks.push(tempSentence.substring(0, maxLength));
-                        tempSentence = tempSentence.substring(maxLength);
-                    }
-                    currentChunk = tempSentence;
-                } else {
-                    currentChunk = sentence;
-                }
-            }
-        }
-        
-        if (currentChunk) chunks.push(currentChunk);
-        return chunks;
-    };
-
     // 检查是否在客户端
     useEffect(() => {
         setIsClient(true);
@@ -236,14 +255,23 @@ export default function Home() {
         const aiText = content;
         const aiTalks = textsToScreenplay([aiText], koeiroParam, emote);
         aiTextLog += aiText;
+        
+        // 检查aiTalks是否为空或无效
+        if (!aiTalks || !aiTalks[0]) {
+            console.warn("[handleUserMessage] 无效的aiTalks:", aiTalks);
+            return;
+        }
+        
         // 文ごとに音声を生成 & 再生、返答を表示
         const currentAssistantMessage = sentences.join(" ");
-        setSubtitle(aiTextLog);
+        setSubtitle("");  // 先清空字幕，防止文本叠加
         setCurrentEmote(emote || "neutral");
+        
         handleSpeakAi(globalConfig, aiTalks[0], () => {
             setAssistantMessage(currentAssistantMessage);
-            // handleSubtitle(aiText + " "); // 添加空格以区分不同的字幕
-            startTypewriterEffect(aiTextLog);
+            // 确保aiTextLog不为undefined
+            const safeText = aiTextLog ? aiTextLog.toString() : "";
+            startTypewriterEffect(safeText);
 
             // アシスタントの返答をログに追加
             const params = JSON.parse(
@@ -277,10 +305,22 @@ export default function Home() {
         const aiText = content;
         const aiTalks = textsToScreenplay([aiText], koeiroParam, emote);
         aiTextLog += aiText;
+        
+        // 检查aiTalks是否为空或无效
+        if (!aiTalks || !aiTalks[0]) {
+            console.warn("[handleDanmakuMessage] 无效的aiTalks:", aiTalks);
+            return;
+        }
+        
         // 文ごとに音声を生成 & 再生、返答を表示
-        setSubtitle(aiTextLog);
+        setSubtitle("");  // 先清空字幕，防止文本叠加
         setCurrentEmote(emote || "neutral");
+        
         handleSpeakAi(globalConfig, aiTalks[0], () => {
+            setAssistantMessage(aiTextLog);
+            // 确保aiTextLog不为undefined
+            const safeText = aiTextLog ? aiTextLog.toString() : "";
+            startTypewriterEffect(safeText);
 
             // 如果有，则播放相应动作
             if (action != null && action != '') {
@@ -291,8 +331,6 @@ export default function Home() {
                 );
             }
 
-            // setAssistantMessage(currentAssistantMessage);
-            startTypewriterEffect(aiTextLog);
             // アシスタントの返答をログに追加
             const params = JSON.parse(
                 window.localStorage.getItem("chatVRMParams") as string
@@ -326,48 +364,24 @@ export default function Home() {
         viewer.model?.loadFBX(buildUrl(content))
     }
 
-    const startTypewriterEffect = (text: string) => {
-        // 开始新的对话前清空字幕
-        clearSubtitle();
+    // 简化的打字机效果函数，只负责设置字幕文本，实际效果由SubtitleBubble组件实现
+    const startTypewriterEffect = useCallback((text: string) => {
+        // 检查并确保不传递undefined
+        if (!text || text === "undefined") {
+            console.log("[startTypewriterEffect] 收到无效文本，已忽略：", text);
+            return;
+        }
         
-        // 分割长文本为多个气泡
-        const textChunks = splitTextIntoChunks(text);
-        let chunkIndex = 0;
+        // 先清空字幕，触发组件重置
+        setSubtitle("");
         
-        const processNextChunk = () => {
-            if (chunkIndex >= textChunks.length) return;
-            
-            const currentChunk = textChunks[chunkIndex];
-            let charIndex = 0;
-            
-            // 清空上一个气泡内容
-            clearSubtitle();
-            
-            // 逐字显示当前块
-            const intervalId = setInterval(() => {
-                handleSubtitle(currentChunk[charIndex]);
-                charIndex++;
-                
-                if (charIndex >= currentChunk.length) {
-                    clearInterval(intervalId);
-                    
-                    // 当前块结束后延迟显示下一块
-                    setTimeout(() => {
-                        chunkIndex++;
-                        if (chunkIndex < textChunks.length) {
-                            processNextChunk();
-                        } else {
-                            // 所有文本显示完毕后的延迟
-                            setTimeout(clearSubtitle, 4000);
-                        }
-                    }, 1500);
-                }
-            }, typingDelay);
-        };
-        
-        // 开始处理第一块
-        processNextChunk();
-    };
+        // 通过setTimeout延迟设置新字幕，确保状态更新
+        setTimeout(() => {
+            // 当接收到新的文本时，直接更新字幕状态，SubtitleBubble组件会负责显示效果
+            console.log("[startTypewriterEffect] 设置字幕：", text);
+            setSubtitle(text);
+        }, 50);
+    }, []);
 
     /**
      * アシスタントとの会話を行う
@@ -393,14 +407,6 @@ export default function Home() {
             ];
             setChatLog(messageLog);
 
-            // 如果有独立窗口，将用户消息同步到独立窗口
-            if (isDetached && chatWindow && !chatWindow.closed) {
-                chatWindow.postMessage({
-                    type: 'SYNC_CHAT_LOG',
-                    chatLog: messageLog
-                }, '*');
-            }
-
             // 调用AI获取回复
             const response = await chat(content, yourName).catch(
                 (e) => {
@@ -409,44 +415,10 @@ export default function Home() {
                 }
             );
 
-            // 获取当前最新聊天记录（可能已经包含了AI回复）
-            const currentChatLog = JSON.parse(window.localStorage.getItem("chatVRMParams") as string)?.chatLog || [];
-            
-            console.log("AI回复后，检查聊天记录，当前有", currentChatLog.length, "条消息");
-            
-            // 如果聊天记录已更新且有独立窗口，立即同步
-            if (currentChatLog.length > messageLog.length && isDetached && chatWindow && !chatWindow.closed) {
-                console.log("检测到聊天记录已包含AI回复，立即同步到独立窗口");
-                chatWindow.postMessage({
-                    type: 'SYNC_CHAT_LOG',
-                    chatLog: currentChatLog
-                }, '*');
-                
-                // 同时更新本地状态，保持一致性
-                setChatLog(currentChatLog);
-            }
-            
-            // 等待一段时间后再次检查和同步（以防万一AI回复晚于此处执行）
-            setTimeout(() => {
-                if (isDetached && chatWindow && !chatWindow.closed) {
-                    const latestChatLog = JSON.parse(window.localStorage.getItem("chatVRMParams") as string)?.chatLog || [];
-                    if (latestChatLog.length > messageLog.length) {
-                        console.log("延迟检查：聊天记录已更新，同步到独立窗口");
-                        chatWindow.postMessage({
-                            type: 'SYNC_CHAT_LOG',
-                            chatLog: latestChatLog
-                        }, '*');
-                        
-                        // 同时更新本地状态
-                        setChatLog(latestChatLog);
-                    }
-                }
-            }, 2000); // 延迟2秒检查
-
             console.log("Chat processing state changing to false")
             setChatProcessing(false);
         },
-        [systemPrompt, chatLog, setChatLog, handleSpeakAi, setImageUrl, openAiKey, koeiroParam, isDetached, chatWindow]
+        [systemPrompt, chatLog, setChatLog, handleSpeakAi, setImageUrl, openAiKey, koeiroParam]
     );
 
     let lastSwitchTime = 0;
@@ -488,7 +460,6 @@ export default function Home() {
     };
 
     const setupWebSocket = () => {
-
         connect().then((webSocket) => {
             socketInstance = webSocket;
             socketInstance.onmessage = handleWebSocketMessage; // Set onmessage listener
@@ -500,168 +471,128 @@ export default function Home() {
         });
     }
 
-    // 处理来自分离窗口的消息
+    return (
+        <WindowManagerProvider
+            onChatProcessStart={handleSendChat}
+            chatLog={chatLog}
+            setChatLog={setChatLog}
+            globalConfig={globalConfig}
+            setGlobalConfig={setGlobalConfig}
+        >
+            <AppContent 
+                isClient={isClient}
+                isLoading={isLoading}
+                loadingStages={loadingStages}
+                handleLoadingStateChange={handleLoadingStateChange}
+                globalConfig={globalConfig}
+                backgroundImageUrl={backgroundImageUrl}
+                subtitle={subtitle}
+                currentEmote={currentEmote}
+                typingDelay={typingDelay}
+                openAiKey={openAiKey}
+                setOpenAiKey={setOpenAiKey}
+                systemPrompt={systemPrompt}
+                setSystemPrompt={setSystemPrompt}
+                chatLog={chatLog}
+                koeiroParam={koeiroParam}
+                assistantMessage={assistantMessage}
+                handleChangeChatLog={handleChangeChatLog}
+                setKoeiroParam={setKoeiroParam}
+                onChangeGlobalConfig={onChangeGlobalConfig}
+                chatProcessing={chatProcessing}
+                handleSendChat={handleSendChat}
+                setBackgroundImageUrl={(url) => setBackgroundImageUrl(generateMediaUrl(url))}
+                setChatLog={setChatLog}
+            />
+        </WindowManagerProvider>
+    );
+}
+
+// AppContent组件，内部使用useWindowManager
+function AppContent({ 
+    isClient,
+    isLoading,
+    loadingStages,
+    handleLoadingStateChange,
+    globalConfig,
+    backgroundImageUrl,
+    subtitle,
+    currentEmote,
+    typingDelay,
+    openAiKey,
+    setOpenAiKey,
+    systemPrompt,
+    setSystemPrompt,
+    chatLog,
+    koeiroParam,
+    assistantMessage,
+    handleChangeChatLog,
+    setKoeiroParam,
+    onChangeGlobalConfig,
+    chatProcessing,
+    handleSendChat,
+    setBackgroundImageUrl,
+    setChatLog
+}: AppContentProps) {
+    // 现在可以在这里安全地使用useWindowManager钩子
+    const { isDetached, handleDetachChat } = useWindowManager();
+    // 创建Panel引用
+    const viewerPanelRef = useRef<any>(null);
+    const vrmViewerRef = useRef<any>(null);
+    const prevDetachedState = useRef(isDetached);
+    const { viewer } = useContext(ViewerContext);
+
+    // 监听分离状态变化，手动调整Panel尺寸和布局
     useEffect(() => {
-        if (!isClient) return;
-
-        const handleMessage = (event: MessageEvent) => {
-            const { data } = event;
-            if (!data || typeof data !== 'object') return;
-
-            if (data.type === 'CHAT_WINDOW_CLOSED') {
-                setIsDetached(false);
-                setChatWindow(null);
-            } else if (data.type === 'CHAT_MESSAGE' && data.content) {
-                // 处理聊天消息
-                console.log("收到独立窗口发送的聊天消息");
-                // 如果消息包含了聊天记录，先更新本地聊天记录
-                if (data.chatLog && Array.isArray(data.chatLog)) {
-                    setChatLog(data.chatLog);
-                }
-                
-                handleSendChat(
-                    globalConfig,
-                    'user',
-                    data.user_name || globalConfig?.characterConfig?.yourName || '你',
-                    data.content
-                );
-            } else if (data.type === 'CONFIG_UPDATED' && data.config) {
-                // 更新配置
-                console.log("收到独立窗口更新的配置");
-                setGlobalConfig(data.config);
-                webGlobalConfig = data.config;
-            } else if (data.type === 'CHAT_LOG_UPDATED' && data.chatLog) {
-                // 同步聊天记录更新
-                console.log("收到独立窗口更新的聊天记录");
-                setChatLog(data.chatLog);
-            } else if (data.type === 'REQUEST_SYNC_DATA') {
-                // 向分离窗口同步数据
-                console.log("收到独立窗口请求同步数据");
-                if (chatWindow && !chatWindow.closed) {
-                    console.log("向独立窗口发送聊天记录，共", chatLog.length, "条消息");
-                    chatWindow.postMessage({
-                        type: 'SYNC_CHAT_LOG',
-                        chatLog: chatLog
-                    }, '*');
-                    
-                    console.log("向独立窗口发送配置");
-                    chatWindow.postMessage({
-                        type: 'SYNC_CONFIG',
-                        config: globalConfig
-                    }, '*');
-                }
-            }
-        };
-
-        window.addEventListener('message', handleMessage);
-        
-        // 处理主窗口关闭前的逻辑
-        const handleBeforeUnload = () => {
-            // 如果有分离窗口，主窗口关闭前先关闭它
-            if (isDetached && chatWindow && !chatWindow.closed) {
-                // 设置允许关闭标志（如果独立窗口实现了此功能）
-                try {
-                    chatWindow.isClosingAllowed = true;
-                    chatWindow.close();
-                } catch (e) {
-                    console.error('关闭独立窗口失败', e);
-                }
-            }
-        };
-        
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        
-        return () => {
-            window.removeEventListener('message', handleMessage);
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
-    }, [isClient, globalConfig, chatLog, isDetached, chatWindow]);
-
-    // 专门用于监听聊天记录变化并同步到独立窗口的效果
-    useEffect(() => {
-        // 只有在有独立窗口且聊天记录不为空时才同步
-        if (isDetached && chatWindow && !chatWindow.closed && chatLog.length > 0) {
-            console.log("检测到聊天记录更新，同步到独立窗口，共", chatLog.length, "条消息");
-            // 延迟50ms发送，确保其他状态更新已完成
+        // 如果分离状态发生变化
+        if (prevDetachedState.current !== isDetached) {
+            prevDetachedState.current = isDetached;
+            
+            // 延迟一点执行以确保不影响VrmViewer的稳定性
             setTimeout(() => {
-                if (chatWindow && !chatWindow.closed) {
-                    chatWindow.postMessage({
-                        type: 'SYNC_CHAT_LOG',
-                        chatLog: chatLog
-                    }, '*');
-                }
-            }, 50);
-        }
-    }, [chatLog, isDetached, chatWindow]);
-
-    // 处理分离和合并聊天窗口
-    const handleDetachChat = () => {
-        if (isDetached && chatWindow) {
-            // 如果已经分离，则关闭窗口
-            if (!chatWindow.closed) {
-                try {
-                    // 设置允许关闭标志
-                    chatWindow.isClosingAllowed = true;
-                    chatWindow.close();
-                } catch (e) {
-                    console.error('关闭独立窗口失败', e);
-                }
-            }
-            setIsDetached(false);
-            setChatWindow(null);
-        } else {
-            // 如果未分离，则打开新窗口，保持手机比例但允许调整大小
-            const windowFeatures = 'width=390,height=700,resizable=yes,scrollbars=yes,status=no,location=no,toolbar=no,menubar=no';
-            const newWindow = window.open('/chat', 'chatWindow', windowFeatures);
-            if (newWindow) {
-                setIsDetached(true);
-                setChatWindow(newWindow);
-                
-                // 窗口加载完成后主动同步数据
-                const syncDataToNewWindow = () => {
+                // 如果有分割面板组，需要重新设置布局
+                if (viewerPanelRef.current) {
                     try {
-                        if (newWindow.document.readyState === 'complete') {
-                            console.log("新窗口加载完成，主动同步数据");
-                            // 300ms后发送数据，确保新窗口的JS已初始化
-                            setTimeout(() => {
-                                if (!newWindow.closed) {
-                                    console.log("向新窗口同步聊天记录，共", chatLog.length, "条消息");
-                                    newWindow.postMessage({
-                                        type: 'SYNC_CHAT_LOG',
-                                        chatLog: chatLog
-                                    }, '*');
-                                    
-                                    console.log("向新窗口同步配置");
-                                    newWindow.postMessage({
-                                        type: 'SYNC_CONFIG',
-                                        config: globalConfig
-                                    }, '*');
-                                }
-                            }, 300);
-                        } else {
-                            // 如果窗口还没加载完成，稍后再试
-                            setTimeout(syncDataToNewWindow, 100);
+                        // 尝试强制设置尺寸
+                        if (typeof viewerPanelRef.current.resize === 'function') {
+                            viewerPanelRef.current.resize(isDetached ? 100 : 70);
                         }
-                    } catch (err) {
-                        // 可能出现跨域访问错误，忽略
-                        console.log("尝试检查窗口状态时出错，可能是跨域限制");
+                    } catch (e) {
+                        console.error("调整面板尺寸时出错:", e);
                     }
-                };
+                }
                 
-                // 开始尝试同步数据
-                syncDataToNewWindow();
-                
-                // 监听窗口关闭事件
-                const checkIfClosed = setInterval(() => {
-                    if (newWindow.closed) {
-                        clearInterval(checkIfClosed);
-                        setIsDetached(false);
-                        setChatWindow(null);
-                    }
-                }, 500); // 每500ms检查一次窗口是否关闭
-            }
+                // 强制调用viewer的resize方法以适应新的大小
+                if (viewer) {
+                    // 多次触发resize，确保布局正确更新后能够重新调整
+                    const resizeTimes = [100, 300, 500, 800, 1200];
+                    resizeTimes.forEach(delay => {
+                        setTimeout(() => {
+                            viewer.resize();
+                        }, delay);
+                    });
+                }
+            }, 100);
         }
-    };
+    }, [isDetached, viewer]);
+
+    // 创建ResizeObserver来监听VrmViewer容器的大小变化
+    useEffect(() => {
+        if (!vrmViewerRef.current || !viewer) return;
+        
+        const resizeObserver = new ResizeObserver(() => {
+            // 容器大小变化时调用viewer的resize方法
+            viewer.resize();
+        });
+        
+        // 开始观察容器大小变化
+        resizeObserver.observe(vrmViewerRef.current);
+        
+        // 清理函数
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [viewer, vrmViewerRef.current]);
 
     return (
         <div
@@ -680,8 +611,13 @@ export default function Home() {
                         direction="horizontal"
                         className="h-screen w-full"
                     >
-                        {/* VrmViewer 区域 (默认70%，当聊天被分离时为100%) */}
-                        <ResizablePanel key={`viewer-panel-${isDetached}`} defaultSize={isDetached ? 100 : 70} minSize={40}>
+                        {/* VrmViewer 区域 */}
+                        <ResizablePanel 
+                            ref={viewerPanelRef}
+                            defaultSize={isDetached ? 100 : 70} 
+                            minSize={40} 
+                            className="viewer-panel"
+                        >
                             <div className="relative h-full" style={{
                                 backgroundImage: `url(${backgroundImageUrl})`,
                                 backgroundSize: 'cover',
@@ -695,62 +631,21 @@ export default function Home() {
                                         message="正在加载虚拟角色..." 
                                     />
                                 )}
-                                <VrmViewer 
-                                    globalConfig={globalConfig}
-                                    onLoadingStateChange={handleLoadingStateChange}
+                                <div ref={vrmViewerRef} className="absolute inset-0 w-full h-full">
+                                    <StableVrmViewer 
+                                        globalConfig={globalConfig}
+                                        onLoadingStateChange={handleLoadingStateChange}
+                                    />
+                                </div>
+                                <SubtitleBubble 
+                                    key={subtitle} // 添加key属性，确保文本变化时组件重新挂载
+                                    text={subtitle || ""}  // 确保传递空字符串而非undefined
+                                    emote={currentEmote}
+                                    position="top"
+                                    typingDelay={typingDelay}
+                                    maxChunkLength={80}
+                                    autoHideDelay={5000}
                                 />
-                                {displayedSubtitle && (
-                                    <div 
-                                        className="absolute bottom-32 left-1/2 transform -translate-x-1/2 z-10 max-w-md"
-                                        style={{
-                                            animation: 'fadeIn 0.3s ease-out',
-                                            transition: 'all 0.3s ease',
-                                            filter: 'drop-shadow(1px 1px 2px rgba(0,0,0,0.1))',
-                                            minWidth: '260px',
-                                            maxWidth: '80%'
-                                        }}
-                                    >
-                                        <div className="relative rounded-2xl bg-white" 
-                                            style={{
-                                                borderWidth: '3px',
-                                                borderColor: '#FF8000',
-                                                boxShadow: 'inset 0 0 0 1px #FFCC00',
-                                                padding: '10px 16px',
-                                                borderRadius: '16px'
-                                            }}>
-                                            {/* 文本内容 */}
-                                            <p style={{
-                                                fontFamily: "fzfs",
-                                                fontSize: "18px",
-                                                color: 'black',
-                                                lineHeight: "1.5",
-                                                margin: 0,
-                                                padding: 0,
-                                                wordBreak: "break-word",
-                                                textAlign: 'center'
-                                            }}>
-                                                {displayedSubtitle}
-                                            </p>
-                                            
-                                            {/* 气泡尖角 - 朝上，更接近示例图片的样式 */}
-                                            <div className="absolute left-1/2 transform -translate-x-1/2" style={{ top: '-13px' }}>
-                                                <svg width="26" height="13" viewBox="0 0 26 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    {/* 背景填充 */}
-                                                    <path d="M2 13L13 2L24 13H2Z" fill="white"/>
-                                                    {/* 边框 */}
-                                                    <path d="M1 13L13 1L25 13" stroke="#FF8000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                                                </svg>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                                {/* 添加全局动画样式 */}
-                                <style jsx global>{`
-                                    @keyframes fadeIn {
-                                        from { opacity: 0; transform: translate(-50%, 15px); }
-                                        to { opacity: 1; transform: translate(-50%, 0); }
-                                    }
-                                `}</style>
                             </div>
                         </ResizablePanel>
                         
@@ -761,44 +656,82 @@ export default function Home() {
                                 <ResizableHandle withHandle />
                                 
                                 {/* 聊天区域 (默认30%) */}
-                                <ResizablePanel key={`chat-panel-${isDetached}`} defaultSize={30} minSize={20}>
+                                <ResizablePanel 
+                                    defaultSize={30} 
+                                    minSize={20}
+                                    className="chat-panel"
+                                >
                                     <div className="h-full flex flex-col bg-white/90 shadow-lg">
                                         <div className="p-3 border-b border-gray-200 flex items-center justify-between bg-gray-50">
                                             <h2 className="text-lg font-medium text-gray-800">
-                                                {globalConfig?.characterConfig?.character_name || "虚拟角色"}
+                                               调试窗口
                                             </h2>
                                             <div className="flex items-center gap-2">
                                                 <DetachButton 
                                                     onDetach={handleDetachChat}
                                                     isDetached={isDetached}
                                                 />
-                                                <SettingsSheet
-                                                    globalConfig={globalConfig}
-                                                    openAiKey={openAiKey}
-                                                    systemPrompt={systemPrompt}
-                                                    chatLog={chatLog}
-                                                    koeiroParam={koeiroParam}
-                                                    assistantMessage={assistantMessage}
-                                                    onChangeAiKey={setOpenAiKey}
-                                                    onChangeBackgroundImageUrl={data =>
-                                                        setBackgroundImageUrl(generateMediaUrl(data))
-                                                    }
-                                                    onChangeSystemPrompt={setSystemPrompt}
-                                                    onChangeChatLog={handleChangeChatLog}
-                                                    onChangeKoeiromapParam={setKoeiroParam}
-                                                    onChangeGlobalConfig={onChangeGlobalConfig}
-                                                    handleClickResetChatLog={() => setChatLog([])}
-                                                    handleClickResetSystemPrompt={() => setSystemPrompt(SYSTEM_PROMPT)}
-                                                />
                                             </div>
                                         </div>
                                         <div className="flex-1 overflow-hidden">
-                                            <ChatContainer
-                                                chatLog={chatLog}
-                                                isChatProcessing={chatProcessing}
-                                                onChatProcessStart={handleSendChat}
-                                                globalConfig={globalConfig}
-                                            />
+                                            <Tabs defaultValue="chat" className="h-full flex flex-col">
+                                                <TabsList className="flex bg-gray-50 border-b border-gray-200 justify-between items-center p-0 m-0 rounded-none">
+                                                    <TabsTrigger 
+                                                      value="chat" 
+                                                      className="flex-1 py-3 px-3 text-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:border-b-[3px] data-[state=active]:bg-primary/5 data-[state=active]:text-primary data-[state=active]:font-semibold font-medium transition-colors"
+                                                    >
+                                                      聊天
+                                                    </TabsTrigger>
+                                                    <TabsTrigger 
+                                                      value="action" 
+                                                      className="flex-1 py-3 px-3 text-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:border-b-[3px] data-[state=active]:bg-primary/5 data-[state=active]:text-primary data-[state=active]:font-semibold font-medium transition-colors"
+                                                    >
+                                                      动作
+                                                    </TabsTrigger>
+                                                    <TabsTrigger 
+                                                      value="settings" 
+                                                      className="flex-1 py-3 px-3 text-sm rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:border-b-[3px] data-[state=active]:bg-primary/5 data-[state=active]:text-primary data-[state=active]:font-semibold font-medium transition-colors"
+                                                    >
+                                                      设置
+                                                    </TabsTrigger>
+                                                </TabsList>
+                                                <TabsContent value="chat" className="flex-1 overflow-hidden p-0 mt-0">
+                                                    <ChatContainer
+                                                        chatLog={chatLog}
+                                                        isChatProcessing={chatProcessing}
+                                                        onChatProcessStart={handleSendChat}
+                                                        globalConfig={globalConfig}
+                                                        onResetChat={() => setChatLog([])}
+                                                    />
+                                                </TabsContent>
+                                                <TabsContent value="action" className="flex-1 overflow-auto p-4 mt-0">
+                                                    <div className="bg-white rounded-lg p-6 h-full flex items-center justify-center">
+                                                        <div className="text-center">
+                                                            <h3 className="text-lg font-medium text-gray-700 mb-2">动作功能即将上线</h3>
+                                                            <p className="text-sm text-gray-500">这里将展示可用的角色动作和表情</p>
+                                                        </div>
+                                                    </div>
+                                                </TabsContent>
+                                                <TabsContent value="settings" className="flex-1 overflow-auto p-0 mt-0">
+                                                    <SettingsSheet
+                                                        globalConfig={globalConfig}
+                                                        openAiKey={openAiKey}
+                                                        systemPrompt={systemPrompt}
+                                                        chatLog={chatLog}
+                                                        koeiroParam={koeiroParam}
+                                                        assistantMessage={assistantMessage}
+                                                        onChangeAiKey={setOpenAiKey}
+                                                        onChangeBackgroundImageUrl={setBackgroundImageUrl}
+                                                        onChangeSystemPrompt={setSystemPrompt}
+                                                        onChangeChatLog={handleChangeChatLog}
+                                                        onChangeKoeiromapParam={setKoeiroParam}
+                                                        onChangeGlobalConfig={onChangeGlobalConfig}
+                                                        handleClickResetChatLog={() => setChatLog([])}
+                                                        handleClickResetSystemPrompt={() => setSystemPrompt(SYSTEM_PROMPT)}
+                                                        isDetachedWindow={isDetached}
+                                                    />
+                                                </TabsContent>
+                                            </Tabs>
                                         </div>
                                     </div>
                                 </ResizablePanel>
@@ -822,5 +755,5 @@ export default function Home() {
             )}
             
         </div>
-    )
+    );
 }

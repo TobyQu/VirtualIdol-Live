@@ -4,20 +4,25 @@ import { ChatList } from "./chat/chat-list"
 import { ChatInput } from "./chat/chat-input"
 import { GlobalConfig } from "@/features/config/configApi"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { MessageCircle } from "lucide-react"
+import { MessageCircle, Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface ChatContainerProps {
   chatLog: Message[]
   isChatProcessing: boolean
   onChatProcessStart: (globalConfig: GlobalConfig, type: string, user_name: string, content: string) => void
   globalConfig: GlobalConfig
+  isDetachedWindow?: boolean
+  onResetChat?: () => void
 }
 
 export function ChatContainer({
   chatLog,
   isChatProcessing,
   onChatProcessStart,
-  globalConfig
+  globalConfig,
+  isDetachedWindow = false,
+  onResetChat
 }: ChatContainerProps) {
   const [isMicRecording, setIsMicRecording] = useState(false)
   const [userMessage, setUserMessage] = useState("")
@@ -86,16 +91,33 @@ export function ChatContainer({
     console.log("Chat processing state:", isChatProcessing);
   }, [isChatProcessing]);
 
+  const handleResetChat = useCallback(() => {
+    if (onResetChat) {
+      onResetChat();
+    }
+  }, [onResetChat]);
+
   return (
     <Card className="flex flex-col h-full border-0 rounded-none shadow-none bg-background">
-      <CardHeader className="px-4 py-3 border-b bg-card">
-        <div className="flex items-center">
-          <MessageCircle className="h-5 w-5 mr-2 text-primary" />
-          <CardTitle className="text-base font-medium">与 {characterName} 的对话</CardTitle>
-        </div>
-      </CardHeader>
       <CardContent className="flex-1 p-0 overflow-hidden">
-        <div className="h-full">
+        <div className="sticky top-0 z-10 flex justify-between items-center p-3 bg-gray-50 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">{characterName}的对话</span>
+          </div>
+          {onResetChat && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleResetChat} 
+              className="h-8 px-2 text-muted-foreground hover:text-destructive transition-colors focus:outline-none focus:ring-1 focus:ring-primary/20"
+              title="清空聊天记录"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        <div className="h-[calc(100%-48px)]">
           <ChatList messages={chatLog} isLoading={isChatProcessing} />
         </div>
       </CardContent>

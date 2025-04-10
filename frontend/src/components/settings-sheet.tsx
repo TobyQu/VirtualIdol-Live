@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Settings2, Plus, Trash2, Save } from "lucide-react"
+import { Settings2, Plus, Trash2, Save, ChevronLeft, ChevronRight } from "lucide-react"
 import { GlobalConfig } from "@/features/config/configApi"
 import { Message } from "@/features/messages/messages"
 import { KoeiroParam } from "@/features/constants/koeiroParam"
@@ -33,6 +33,7 @@ import { MemorySettings } from "./settings/memory-settings"
 import { AdvancedSettings } from "./settings/advanced-settings"
 import { AssetsSettings } from "./settings/assets-settings"
 import { showSuccess, showError } from "@/lib/toast"
+import { Card, CardContent } from "./ui/card"
 
 const llm_enums = ["openai", "ollama", 'zhipuai'];
 
@@ -85,6 +86,7 @@ type Props = {
   onChangeGlobalConfig: (globalConfig: GlobalConfig) => void
   handleClickResetChatLog: () => void
   handleClickResetSystemPrompt: () => void
+  isDetachedWindow?: boolean
 }
 
 export function SettingsSheet({
@@ -102,8 +104,8 @@ export function SettingsSheet({
   onChangeGlobalConfig,
   handleClickResetChatLog,
   handleClickResetSystemPrompt,
+  isDetachedWindow = false,
 }: Props) {
-  const [open, setOpen] = useState(false)
   const { viewer } = useContext(ViewerContext)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [enableProxy, setEnableProxy] = useState(globalConfig?.enableProxy || false);
@@ -124,21 +126,65 @@ export function SettingsSheet({
   const [deleteVrmModelLog, setDeleteVrmModelLog] = useState("");
   const [uploadRolePackageLog, setUploadRolePackageLog] = useState("");
   const [isClient, setIsClient] = useState(false);
-  const [isDetachedWindow, setIsDetachedWindow] = useState(false);
+  const [showLeftScroll, setShowLeftScroll] = useState(false);
+  const [showRightScroll, setShowRightScroll] = useState(true);
 
   const backgroundFileInputRef = useRef<HTMLInputElement>(null);
   const VrmModelFileInputRef = useRef<HTMLInputElement>(null);
   const RolePackagelFileInputRef = useRef<HTMLInputElement>(null);
+  const tabsListRef = useRef<HTMLDivElement>(null);
 
-  // 检查是否在客户端和是否在独立窗口
+  // 检查是否在客户端
   useEffect(() => {
     setIsClient(true);
-    // 检测是否在独立窗口中
-    if (typeof window !== 'undefined') {
-      // 如果是在/chat页面，则认为是在独立窗口中
-      setIsDetachedWindow(window.location.pathname === '/chat');
-    }
   }, []);
+
+  // 监听标签滚动
+  useEffect(() => {
+    if (!isClient || !tabsListRef.current) return;
+
+    const checkScroll = () => {
+      const element = tabsListRef.current;
+      if (!element) return;
+      
+      // 判断是否可以向左滚动（当前滚动位置>0）
+      setShowLeftScroll(element.scrollLeft > 5);
+      
+      // 判断是否可以向右滚动（总宽度 - 当前滚动位置 - 可见宽度 > 5px）
+      const canScrollRight = element.scrollWidth - element.scrollLeft - element.clientWidth > 5;
+      setShowRightScroll(canScrollRight);
+      
+      // 如果内容宽度大于容器宽度，但还没开始滚动，强制显示右滚动按钮
+      if (element.scrollWidth > element.clientWidth && element.scrollLeft === 0) {
+        setShowRightScroll(true);
+      }
+      
+      // 强制显示右键按钮在窄屏幕上或分离窗口中
+      if (window.innerWidth < 768 || isDetachedWindow) {
+        setShowRightScroll(true);
+      }
+    };
+    
+    // 初始检查
+    checkScroll();
+    
+    // 添加滚动事件监听
+    const tabsList = tabsListRef.current;
+    tabsList.addEventListener('scroll', checkScroll);
+    
+    // 窗口大小变化时也检查
+    window.addEventListener('resize', checkScroll);
+    
+    // 确保在较窄屏幕上初始时就显示右滚动按钮 - 多次检测以确保准确性
+    setTimeout(checkScroll, 100);
+    setTimeout(checkScroll, 500); 
+    setTimeout(checkScroll, 1000);
+    
+    return () => {
+      tabsList.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, [isClient, isDetachedWindow]);
 
   // 初始化数据
   useEffect(() => {
@@ -156,7 +202,21 @@ export function SettingsSheet({
     getVoices().then(data => setVoices(data));
     // 获取情绪列表
     getEmotions().then(data => setEmotions(data));
-  }, [isClient]);
+    
+    // 确保一开始就显示右滚动按钮
+    setShowRightScroll(true);
+    
+    // 在分离窗口中，延迟设置tabsList引用以确保DOM已完全加载
+    if (isDetachedWindow) {
+      setTimeout(() => {
+        // 强制触发滚动检查
+        if (tabsListRef.current) {
+          const event = new Event('scroll');
+          tabsListRef.current.dispatchEvent(event);
+        }
+      }, 300);
+    }
+  }, [isClient, isDetachedWindow]);
 
   const handleCustomRole = () => {
     if (enableCreateRole) {
@@ -208,6 +268,164 @@ export function SettingsSheet({
     }
   };
 
+  const handleClickOpenVrmFile = () => {
+    VrmModelFileInputRef?.current?.click();
+  }
+
+  const handleClickChangeBgFile = () => {
+    backgroundFileInputRef?.current?.click();
+  }
+
+  const handleVrmModelFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target && event.target.files) {
+      const selectedFile = event.target.files[0];
+      if (!selectedFile) {
+        return;
+      }
+      const formData = new FormData();
+      formData.append('vrm_model', selectedFile);
+      uploadVrmModel(formData)
+        .then(() => {
+          queryUserVrmModels().then(data => {
+            setUserVrmModels(data);
+          });
+        })
+        .catch(error => {
+          console.error('上传VRM模型失败:', error);
+        });
+    }
+  }
+
+  const handleBackgroundFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target && event.target.files) {
+      const selectedFile = event.target.files[0];
+      if (!selectedFile) {
+        return;
+      }
+      const formData = new FormData();
+      formData.append('background', selectedFile);
+      uploadBackground(formData)
+        .then(() => {
+          queryBackground().then(data => {
+            setBackgroundModels(data);
+          });
+        })
+        .catch(error => {
+          console.error('上传背景图片失败:', error);
+        });
+    }
+  }
+
+  const handleVrmModelDelete = (vrmModelId: number) => {
+    deleteVrmModel(vrmModelId)
+      .then(() => {
+        setDeleteVrmModelLog("删除成功");
+        queryUserVrmModels().then(data => {
+          setUserVrmModels(data);
+        });
+      })
+      .catch(() => setDeleteVrmModelLog("删除失败"));
+  };
+
+  const handleBackgroundDelete = (backgroundId: number) => {
+    deleteBackground(backgroundId)
+      .then(() => {
+        queryBackground().then(data => {
+          setBackgroundModels(data);
+        });
+      })
+      .catch(error => {
+        console.error('删除背景图片失败:', error);
+      });
+  };
+
+  const handleSubmit = () => {
+    form.handleSubmit(
+      (values) => {
+        const formData = {
+          ...globalConfig,
+          enableProxy: values.proxyEnabled,
+          enableLive: values.liveEnabled,
+          httpProxy: values.httpProxy,
+          httpsProxy: values.httpsProxy,
+          socks5Proxy: values.socks5Proxy,
+          liveStreamingConfig: {
+            ...globalConfig.liveStreamingConfig,
+            B_ROOM_ID: values.roomId,
+            B_COOKIE: values.cookie,
+          },
+          conversationConfig: {
+            ...globalConfig.conversationConfig,
+            conversationType: values.conversationType,
+            languageModel: values.languageModel,
+          },
+          characterConfig: {
+            ...globalConfig.characterConfig,
+            character_name: values.characterName,
+            yourName: values.yourName,
+            vrmModel: values.vrmModel,
+          },
+          background_url: values.backgroundUrl,
+          languageModelConfig: {
+            ...globalConfig.languageModelConfig,
+            openai: {
+              ...globalConfig.languageModelConfig.openai,
+              OPENAI_API_KEY: values.openaiApiKey,
+              OPENAI_BASE_URL: values.openaiBaseUrl,
+            },
+            zhipuai: {
+              ...globalConfig.languageModelConfig.zhipuai,
+              ZHIPUAI_API_KEY: values.zhipuaiApiKey,
+            },
+            ollama: {
+              ...globalConfig.languageModelConfig.ollama,
+              OLLAMA_API_BASE: values.ollamaApiBase,
+              OLLAMA_API_MODEL_NAME: values.ollamaModelName,
+            },
+          },
+          memoryStorageConfig: {
+            ...globalConfig.memoryStorageConfig,
+            enableLongMemory: values.enableLongMemory,
+            milvusMemory: {
+              ...globalConfig.memoryStorageConfig.milvusMemory,
+              host: values.milvusHost,
+              port: values.milvusPort,
+              user: values.milvusUser,
+              password: values.milvusPassword,
+              dbName: values.milvusDbName,
+            },
+          },
+          ttsConfig: {
+            ...globalConfig.ttsConfig,
+            ttsVoiceId: values.ttsVoiceId,
+            emotion: values.emotion,
+          },
+        };
+
+        saveConfig(formData).then(() => {
+          showSuccess("设置保存成功");
+          onChangeGlobalConfig(formData);
+        }).catch(error => {
+          showError("设置保存失败");
+          console.error('保存设置失败:', error);
+        });
+      }
+    )();
+  };
+
+  // 添加左右滚动函数
+  const scrollTabsLeft = () => {
+    if (tabsListRef.current) {
+      tabsListRef.current.scrollBy({ left: -120, behavior: 'smooth' });
+    }
+  };
+
+  const scrollTabsRight = () => {
+    if (tabsListRef.current) {
+      tabsListRef.current.scrollBy({ left: 120, behavior: 'smooth' });
+    }
+  };
+
   const form = useForm<FormValues>({
     defaultValues: {
       proxyEnabled: globalConfig?.enableProxy || false,
@@ -244,247 +462,151 @@ export function SettingsSheet({
     }
   });
 
-  const handleChangeSystemPrompt = useCallback(
-    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-      onChangeSystemPrompt(event.target.value)
-    },
-    [onChangeSystemPrompt]
-  )
-
-  const handleAiKeyChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      onChangeAiKey(event.target.value)
-    },
-    [onChangeAiKey]
-  )
-
-  const handleChangeKoeiroParam = useCallback(
-    (x: number, y: number) => {
-      onChangeKoeiromapParam({
-        speakerX: x,
-        speakerY: y,
-      })
-    },
-    [onChangeKoeiromapParam]
-  )
-
-  const handleClickOpenVrmFile = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.vrm';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const url = URL.createObjectURL(file);
-        viewer?.loadVrm(url);
-      }
-    };
-    input.click();
-  };
-
-  const handleChangeVrmFile = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const files = event.target.files
-      if (!files) return
-
-      const file = files[0]
-      if (!file) return
-
-      loadVrmFile(file)
-      event.target.value = ""
-    },
-    [viewer]
-  )
-
-  function loadVrmFile(file: File) {
-    const file_type = file.name.split(".").pop()
-    if (file_type === "vrm") {
-      const blob = new Blob([file], { type: "application/octet-stream" })
-      const url = window.URL.createObjectURL(blob)
-      viewer.loadVrm(url)
-    }
-  }
-
-  const handleSubmit = () => {
-    try {
-      // 确保配置对象包含所有必要的字段
-      const configToSave = {
-        ...globalConfig,
-        characterConfig: {
-          ...globalConfig?.characterConfig,
-          character: globalConfig?.characterConfig?.character || -1,
-          character_name: globalConfig?.characterConfig?.character_name || "",
-          yourName: globalConfig?.characterConfig?.yourName || "",
-          vrmModel: globalConfig?.characterConfig?.vrmModel || "",
-          vrmModelType: globalConfig?.characterConfig?.vrmModelType || ""
-        },
-        ttsConfig: {
-          ...globalConfig?.ttsConfig,
-          ttsType: globalConfig?.ttsConfig?.ttsType || "minimax",
-          ttsVoiceId: globalConfig?.ttsConfig?.ttsVoiceId || "-1",
-          emotion: globalConfig?.ttsConfig?.emotion || "neutral"
-        },
-        conversationConfig: {
-          ...globalConfig?.conversationConfig,
-          conversationType: globalConfig?.conversationConfig?.conversationType || "default",
-          languageModel: globalConfig?.conversationConfig?.languageModel || "openai"
-        },
-        memoryStorageConfig: {
-          ...globalConfig?.memoryStorageConfig,
-          enableLongMemory: globalConfig?.memoryStorageConfig?.enableLongMemory || false,
-          enableSummary: globalConfig?.memoryStorageConfig?.enableSummary || false,
-          enableReflection: globalConfig?.memoryStorageConfig?.enableReflection || false,
-          languageModelForSummary: globalConfig?.memoryStorageConfig?.languageModelForSummary || "openai",
-          languageModelForReflection: globalConfig?.memoryStorageConfig?.languageModelForReflection || "openai",
-          milvusMemory: {
-            ...globalConfig?.memoryStorageConfig?.milvusMemory,
-            host: globalConfig?.memoryStorageConfig?.milvusMemory?.host || "localhost",
-            port: globalConfig?.memoryStorageConfig?.milvusMemory?.port || "19530",
-            user: globalConfig?.memoryStorageConfig?.milvusMemory?.user || "",
-            password: globalConfig?.memoryStorageConfig?.milvusMemory?.password || "",
-            dbName: globalConfig?.memoryStorageConfig?.milvusMemory?.dbName || "virtualwife"
-          }
-        },
-        languageModelConfig: {
-          ...globalConfig?.languageModelConfig,
-          openai: {
-            ...globalConfig?.languageModelConfig?.openai,
-            OPENAI_API_KEY: globalConfig?.languageModelConfig?.openai?.OPENAI_API_KEY || "",
-            OPENAI_BASE_URL: globalConfig?.languageModelConfig?.openai?.OPENAI_BASE_URL || ""
-          },
-          zhipuai: {
-            ...globalConfig?.languageModelConfig?.zhipuai,
-            ZHIPUAI_API_KEY: globalConfig?.languageModelConfig?.zhipuai?.ZHIPUAI_API_KEY || ""
-          },
-          ollama: {
-            ...globalConfig?.languageModelConfig?.ollama,
-            OLLAMA_API_BASE: globalConfig?.languageModelConfig?.ollama?.OLLAMA_API_BASE || "http://localhost:11434",
-            OLLAMA_API_MODEL_NAME: globalConfig?.languageModelConfig?.ollama?.OLLAMA_API_MODEL_NAME || "qwen:7b"
-          }
-        },
-        liveStreamingConfig: {
-          ...globalConfig?.liveStreamingConfig,
-          B_ROOM_ID: globalConfig?.liveStreamingConfig?.B_ROOM_ID || "",
-          B_COOKIE: globalConfig?.liveStreamingConfig?.B_COOKIE || ""
-        },
-        enableProxy: globalConfig?.enableProxy || false,
-        enableLive: globalConfig?.enableLive || false,
-        httpProxy: globalConfig?.httpProxy || "",
-        httpsProxy: globalConfig?.httpsProxy || "",
-        socks5Proxy: globalConfig?.socks5Proxy || "",
-        background_id: globalConfig?.background_id || -1,
-        background_url: globalConfig?.background_url || ""
-      };
-
-      console.log("Saving configuration:", configToSave);
-      saveConfig(configToSave)
-        .then(() => {
-          console.log("Configuration saved successfully");
-          showSuccess("设置已成功保存!");
-        })
-        .catch(error => {
-          console.error("Failed to save configuration:", error);
-          showError(`保存设置失败: ${error.message}`);
-        });
-    } catch (e: unknown) {
-      console.error("Error in handleSubmit:", e);
-      const errorMessage = e instanceof Error ? e.message : String(e);
-      showError(`保存设置时出错: ${errorMessage}`);
-    }
-  }
-
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Settings2 className="h-4 w-4" />
-        </Button>
-      </SheetTrigger>
-      <SheetContent className="sheet-content" fullWidth={isDetachedWindow}>
-        <SheetHeader>
-          <div className="flex justify-between items-center">
-            <SheetTitle>设置</SheetTitle>
+    <Card className={`h-full flex flex-col border-0 rounded-none shadow-none ${isDetachedWindow ? 'detached-window-card' : ''}`}>
+      <CardContent className="flex-1 overflow-auto p-4 pt-2 pb-16">
+        <Form {...form}>
+          <Tabs defaultValue="basic" className="w-full">
+            <div className={`relative sticky top-0 z-10 mb-6 ${isDetachedWindow ? 'bg-white pb-2' : ''}`}>
+              <div className="flex items-center relative">
+                {/* 左滚动渐变区域（替代独立按钮） */}
+                <div 
+                  onClick={scrollTabsLeft}
+                  className={`absolute left-0 top-0 h-full w-10 bg-gradient-to-r from-background via-background/90 to-transparent z-20 flex items-center justify-start pl-1 cursor-pointer ${showLeftScroll ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                >
+                  <ChevronLeft className="h-5 w-5 text-primary drop-shadow-md" />
+                </div>
+                
+                {/* TabsList容器 */}
+                <div className="w-full relative">
+                  <TabsList 
+                    className={`flex w-full overflow-x-auto scroll-hidden p-1.5 bg-gradient-to-b from-background to-muted/60 rounded-lg shadow-md border ${isDetachedWindow ? 'detached-tabs-list' : ''}`}
+                    ref={tabsListRef}
+                  >
+                    <TabsTrigger value="basic" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">基础设置</TabsTrigger>
+                    <TabsTrigger value="character" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">角色设置</TabsTrigger>
+                    <TabsTrigger value="voice" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">语音设置</TabsTrigger>
+                    <TabsTrigger value="llm" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">语言模型</TabsTrigger>
+                    <TabsTrigger value="memory" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">记忆模块</TabsTrigger>
+                    <TabsTrigger value="advanced" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">高级设置</TabsTrigger>
+                    <TabsTrigger value="assets" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">资产设置</TabsTrigger>
+                  </TabsList>
+                </div>
+                
+                {/* 右滚动渐变区域（替代独立按钮） */}
+                <div
+                  onClick={scrollTabsRight}
+                  className={`absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-background via-background/90 to-transparent z-20 flex items-center justify-end pr-1 cursor-pointer ${showRightScroll ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                >
+                  <ChevronRight className="h-5 w-5 text-primary drop-shadow-md" />
+                </div>
+              </div>
+            </div>
+            
+            <TabsContent value="basic" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
+              <BasicSettings
+                globalConfig={globalConfig}
+                onChangeGlobalConfig={onChangeGlobalConfig}
+                selectedRoleId={selectedRoleId}
+                enableCreateRole={enableCreateRole}
+                form={form}
+              />
+            </TabsContent>
+            
+            <TabsContent value="character" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
+              <CharacterSettings
+                globalConfig={globalConfig}
+                onChangeGlobalConfig={onChangeGlobalConfig}
+                onChangeBackgroundImageUrl={onChangeBackgroundImageUrl}
+                selectedRoleId={selectedRoleId}
+                setSelectedRoleId={setSelectedRoleId}
+                enableCreateRole={enableCreateRole}
+                setEnableCreateRole={setEnableCreateRole}
+                form={form}
+              />
+            </TabsContent>
+            
+            <TabsContent value="voice" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
+              <VoiceSettings
+                globalConfig={globalConfig}
+                onChangeGlobalConfig={onChangeGlobalConfig}
+                form={form}
+              />
+            </TabsContent>
+            
+            <TabsContent value="llm" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
+              <LLMSettings
+                globalConfig={globalConfig}
+                onChangeGlobalConfig={onChangeGlobalConfig}
+                form={form}
+              />
+            </TabsContent>
+            
+            <TabsContent value="memory" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
+              <MemorySettings
+                globalConfig={globalConfig}
+                onChangeGlobalConfig={onChangeGlobalConfig}
+                form={form}
+              />
+            </TabsContent>
+            
+            <TabsContent value="advanced" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
+              <AdvancedSettings
+                globalConfig={globalConfig}
+                onChangeGlobalConfig={onChangeGlobalConfig}
+                form={form}
+              />
+            </TabsContent>
+            
+            <TabsContent value="assets" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
+              <AssetsSettings
+                globalConfig={globalConfig}
+                onChangeGlobalConfig={onChangeGlobalConfig}
+                onChangeBackgroundImageUrl={onChangeBackgroundImageUrl}
+                form={form}
+              />
+            </TabsContent>
+          </Tabs>
+        </Form>
+        
+        {/* 隐藏的文件输入 */}
+        <input
+          type="file"
+          ref={backgroundFileInputRef}
+          style={{ display: 'none' }}
+          accept="image/*"
+          onChange={handleBackgroundFileChange}
+        />
+        <input
+          type="file"
+          ref={VrmModelFileInputRef}
+          style={{ display: 'none' }}
+          accept=".vrm"
+          onChange={handleVrmModelFileChange}
+        />
+        <input
+          type="file"
+          ref={RolePackagelFileInputRef}
+          style={{ display: 'none' }}
+          accept=".zip"
+          onChange={handleRolePackageFileChange}
+        />
+        
+        {/* 右下角的浮动保存按钮 */}
+        <div className="fixed bottom-6 right-6 flex flex-col items-center z-10 group">
+          <div className="mb-2 bg-white/90 text-sm font-medium px-3 py-1 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            保存修改
           </div>
-          <SheetDescription className="flex justify-between items-center">
-            <h2>调整虚拟角色的各项设置</h2>
-            <Button type="submit" onClick={handleSubmit}>
-              保存修改
-            </Button>
-          </SheetDescription>
-        </SheetHeader>
-        <div className="py-6">
-          <Form {...form}>
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-7">
-                <TabsTrigger value="basic">基础设置</TabsTrigger>
-                <TabsTrigger value="character">角色设置</TabsTrigger>
-                <TabsTrigger value="voice">语音设置</TabsTrigger>
-                <TabsTrigger value="llm">语言模型</TabsTrigger>
-                <TabsTrigger value="memory">记忆模块</TabsTrigger>
-                <TabsTrigger value="advanced">高级设置</TabsTrigger>
-                <TabsTrigger value="assets">资产设置</TabsTrigger>
-              </TabsList>
-              <TabsContent value="basic">
-                <BasicSettings
-                  globalConfig={globalConfig}
-                  onChangeGlobalConfig={onChangeGlobalConfig}
-                  selectedRoleId={selectedRoleId}
-                  enableCreateRole={enableCreateRole}
-                  form={form}
-                />
-              </TabsContent>
-              <TabsContent value="character">
-                <CharacterSettings
-                  globalConfig={globalConfig}
-                  onChangeGlobalConfig={onChangeGlobalConfig}
-                  onChangeBackgroundImageUrl={onChangeBackgroundImageUrl}
-                  selectedRoleId={selectedRoleId}
-                  setSelectedRoleId={setSelectedRoleId}
-                  enableCreateRole={enableCreateRole}
-                  setEnableCreateRole={setEnableCreateRole}
-                  form={form}
-                />
-              </TabsContent>
-              <TabsContent value="voice">
-                <VoiceSettings
-                  globalConfig={globalConfig}
-                  onChangeGlobalConfig={onChangeGlobalConfig}
-                  form={form}
-                />
-              </TabsContent>
-              <TabsContent value="llm">
-                <LLMSettings
-                  globalConfig={globalConfig}
-                  onChangeGlobalConfig={onChangeGlobalConfig}
-                  form={form}
-                />
-              </TabsContent>
-              <TabsContent value="memory">
-                <MemorySettings
-                  globalConfig={globalConfig}
-                  onChangeGlobalConfig={onChangeGlobalConfig}
-                  form={form}
-                />
-              </TabsContent>
-              <TabsContent value="advanced">
-                <AdvancedSettings
-                  globalConfig={globalConfig}
-                  onChangeGlobalConfig={onChangeGlobalConfig}
-                  form={form}
-                />
-              </TabsContent>
-              <TabsContent value="assets">
-                <AssetsSettings
-                  globalConfig={globalConfig}
-                  onChangeGlobalConfig={onChangeGlobalConfig}
-                  onChangeBackgroundImageUrl={onChangeBackgroundImageUrl}
-                  form={form}
-                />
-              </TabsContent>
-            </Tabs>
-          </Form>
+          <Button 
+            type="submit" 
+            onClick={handleSubmit}
+            className="rounded-full w-14 h-14 shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-transform hover:scale-105"
+            size="icon"
+          >
+            <Save className="h-6 w-6" />
+          </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </CardContent>
+    </Card>
   )
 } 

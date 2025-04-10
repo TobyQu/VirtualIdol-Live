@@ -75,13 +75,13 @@ export function ChatList({ messages, isLoading = false }: ChatListProps) {
 
   if (!messages.length) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-card/50">
-        <div className="text-center max-w-sm p-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary/20 flex items-center justify-center">
-            <MessageCircle className="w-8 h-8 text-secondary" />
+      <div className="flex-1 flex items-center justify-center bg-background h-full">
+        <div className="text-center max-w-sm p-6">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+            <MessageCircle className="w-8 h-8 text-gray-500" />
           </div>
-          <h3 className="text-lg font-medium text-foreground mb-2">欢迎使用虚拟角色聊天</h3>
-          <p className="text-sm text-muted-foreground">开始与您的虚拟伙伴对话吧</p>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">欢迎使用虚拟角色聊天</h3>
+          <p className="text-sm text-gray-500">开始与您的虚拟伙伴对话吧</p>
         </div>
       </div>
     )
@@ -106,8 +106,9 @@ export function ChatList({ messages, isLoading = false }: ChatListProps) {
         position: 'relative',
         backgroundColor: 'var(--background)'
       }}
+      className="scroll-pt-2"
     >
-      <div className="flex flex-col py-6">
+      <div className="flex flex-col pt-4 pb-6">
         <div className="w-full max-w-3xl mx-auto px-4 space-y-6">
           {messages.map((message, index) => (
             <ChatMessage 

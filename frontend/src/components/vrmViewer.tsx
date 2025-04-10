@@ -183,6 +183,30 @@ export default function VrmViewer({
     [viewer, updateLoadingStage]
   );
 
+  useEffect(() => {
+    if (!viewer) return;
+    
+    // 创建ResizeObserver实例监听容器大小变化
+    const resizeObserver = new ResizeObserver(() => {
+      // 容器尺寸变化时调用resize方法
+      if (viewer && viewer.isReady) {
+        viewer.resize();
+      }
+    });
+    
+    // 获取当前canvas元素的父容器
+    const canvasElement = document.querySelector('canvas');
+    if (canvasElement && canvasElement.parentElement) {
+      // 监听父容器尺寸变化
+      resizeObserver.observe(canvasElement.parentElement);
+    }
+    
+    // 组件卸载时清理
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [viewer]);
+
   return (
     <div className="w-full h-full">
       <canvas ref={canvasRef} className="h-full w-full"></canvas>
