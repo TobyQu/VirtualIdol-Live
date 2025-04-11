@@ -1,23 +1,26 @@
 import json
 import logging
 import traceback
+from typing import Any, Dict, List
 
-from ..config.sys_config import SysConfig
+# 使用接口模块中的接口
+from ..config.interfaces import SysConfigInterface
+
 from .faiss.faiss_storage_impl import FAISSStorage
 from .local.local_storage_impl import LocalStorage
 from ..utils.snowflake_utils import SnowFlake
-from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
 
 class MemoryStorageDriver:
-    sys_config: SysConfig
+    sys_config: SysConfigInterface  # 使用接口定义
     short_memory_storage: LocalStorage
     long_memory_storage: FAISSStorage
     snow_flake: SnowFlake = SnowFlake(data_center_id=5, worker_id=5)
 
-    def __init__(self, memory_storage_config: dict[str, str], sys_config: SysConfig) -> None:
+    def __init__(self, memory_storage_config: dict[str, str], sys_config: SysConfigInterface) -> None:
+        # 使用接口类型
         self.sys_config = sys_config
         self.short_memory_storage = LocalStorage(memory_storage_config)
         if sys_config.enable_longMemory:
@@ -107,10 +110,10 @@ class MemoryStorageDriver:
 
 
 class MemorySummary:
-    sys_config: SysConfig
+    sys_config: SysConfigInterface  # 使用接口定义
     prompt: str
 
-    def __init__(self, sys_config: SysConfig) -> None:
+    def __init__(self, sys_config: SysConfigInterface) -> None:
         self.sys_config = sys_config
         self.prompt = '''
                <s>[INST] <<SYS>>          
@@ -143,33 +146,86 @@ class MemorySummary:
 
 
 class MemoryImportance:
-    sys_config: SysConfig
+    sys_config: SysConfigInterface  # 使用接口定义
     prompt: str
+    importance_rules: dict
 
-    def __init__(self, sys_config: SysConfig) -> None:
+    def __init__(self, sys_config: SysConfigInterface) -> None:
         self.sys_config = sys_config
-        self.prompt = '''
-               <s>[INST] <<SYS>>  
-                There is a scoring mechanism for the importance of memory, on a scale of 10, where 1 is a mundane task (eg, brushing your teeth, making your bed) and 10 is an impressive extremely and important task (eg, breaking up, college admissions), Please help me evaluate the importance score of the following memory.
-                Please do not output the inference process, just output the scoring results.
-                Please output the results strictly in JSON format:
-                {"score": "The rating result you generated"}
-                <</SYS>>
-        '''
+        self.importance_rules = {
+            # 关键词及其对应的分数
+            "keywords": {
+                "分手": 9,
+                "结婚": 8,
+                "求婚": 8,
+                "表白": 7,
+                "吵架": 6,
+                "道歉": 5,
+                "礼物": 4,
+                "约会": 4,
+                "吃饭": 3,
+                "睡觉": 2,
+                "早安": 1,
+                "晚安": 1
+            },
+            # 情感词及其对应的分数
+            "emotions": {
+                "爱": 7,
+                "喜欢": 6,
+                "讨厌": 6,
+                "生气": 5,
+                "开心": 4,
+                "难过": 5,
+                "害怕": 4,
+                "担心": 4
+            },
+            # 时间相关词及其对应的分数
+            "time_related": {
+                "永远": 6,
+                "一直": 5,
+                "每天": 3,
+                "经常": 3,
+                "偶尔": 2,
+                "今天": 1
+            }
+        }
 
     def importance(self, llm_model_type: str, input: str) -> int:
-        result = self.sys_config.llm_model_driver.chat(prompt=self.prompt, type=llm_model_type, role_name="",
-                                                       you_name="", query=f"memory:{input}", short_history=[],
-                                                       long_history="")
-        logger.debug("=> score:", result)
-        # 寻找 JSON 子串的开始和结束位置
-        start_idx = result.find('{')
-        end_idx = result.rfind('}')
-        score = 3
-        if start_idx != -1 and end_idx != -1:
-            json_str = result[start_idx:end_idx + 1]
-            json_data = json.loads(json_str)
-            score = int(json_data["score"])
-        else:
-            logger.warn("未找到匹配的JSON字符串")
-        return score
+        """基于规则的记忆重要性评分"""
+        # 基础分数
+        base_score = 3
+        
+        # 检查关键词
+        for keyword, score in self.importance_rules["keywords"].items():
+            if keyword in input:
+                base_score = max(base_score, score)
+        
+        # 检查情感词
+        emotion_score = 0
+        for emotion, score in self.importance_rules["emotions"].items():
+            if emotion in input:
+                emotion_score += score
+        if emotion_score > 0:
+            base_score = max(base_score, min(emotion_score // 2, 8))
+        
+        # 检查时间相关词
+        time_score = 0
+        for time_word, score in self.importance_rules["time_related"].items():
+            if time_word in input:
+                time_score += score
+        if time_score > 0:
+            base_score = max(base_score, min(time_score // 2, 7))
+        
+        # 检查句子长度
+        if len(input) > 50:  # 长文本可能包含更多重要信息
+            base_score = min(base_score + 1, 10)
+        
+        # 检查是否包含问句
+        if "？" in input or "?" in input:
+            base_score = min(base_score + 1, 10)
+        
+        # 检查是否包含感叹句
+        if "！" in input or "!" in input:
+            base_score = min(base_score + 1, 10)
+        
+        return base_score

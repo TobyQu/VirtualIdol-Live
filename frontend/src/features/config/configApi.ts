@@ -9,14 +9,23 @@ export interface ZepMemoryConfig {
     zep_optional_api_key: string;
 }
 
+export interface MilvusMemoryConfig {
+    host: string;
+    port: string;
+    user: string;
+    password: string;
+    dbName: string;
+}
+
 export interface MemoryStorageConfig {
     enableLongMemory: boolean;
     enableSummary: boolean;
     enableReflection: boolean;
     languageModelForSummary: string;
     languageModelForReflection: string;
-    faissMemory: FAISSMemoryConfig;
+    faissMemory?: FAISSMemoryConfig;
     zep_memory: ZepMemoryConfig;
+    milvusMemory?: MilvusMemoryConfig;
 }
 
 export interface CharacterConfig {
@@ -63,6 +72,14 @@ export interface LiveStreamingConfig {
     B_COOKIE: string;
 }
 
+export interface EmotionConfig {
+    enabled: boolean;
+    sensitivity: number;
+    changeSpeed: number;
+    defaultEmotion: string;
+    expressionIntensity: number;
+}
+
 export interface GlobalConfig {
     characterConfig: CharacterConfig;
     ttsConfig: TTSConfig;
@@ -78,6 +95,7 @@ export interface GlobalConfig {
     background_id: number;
     background_url: string;
     custom_role_template_type?: string;
+    emotionConfig?: EmotionConfig;
 }
 
 // 定义formData初始状态 shape

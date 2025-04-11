@@ -5,7 +5,6 @@ import threading
 import traceback
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from ..config import singleton_sys_config
 from ..utils.chat_message_utils import format_chat_text
 from ..utils.str_utils import remove_special_characters, remove_emojis
 from ..emotion.emotion_manage import GenerationEmote
@@ -99,8 +98,12 @@ def realtime_callback(role_name: str, you_name: str, content: str, end_bool: boo
 
         # 生成人物表情
         try:
-            generation_emote = GenerationEmote(llm_model_driver=singleton_sys_config.llm_model_driver,
-                                              llm_model_driver_type=singleton_sys_config.conversation_llm_model_driver_type)
+            # 在这里动态导入配置，避免循环依赖
+            from ..config import get_sys_config
+            sys_config = get_sys_config()
+            
+            generation_emote = GenerationEmote(llm_model_driver=sys_config.llm_model_driver,
+                                              llm_model_driver_type=sys_config.conversation_llm_model_driver_type)
             emote = generation_emote.generation_emote(
                 query=message_text)
             logger.info(f"生成表情: {emote}")

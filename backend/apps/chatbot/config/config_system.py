@@ -1,0 +1,240 @@
+import logging
+from typing import Dict, Any, Optional, List
+import os
+
+from ..llms.llm_model_strategy import LlmModelDriver
+from ..reflection.reflection import ImportanceRating, PortraitAnalysis
+from .config_manager import get_config_manager, SystemConfig
+from .interfaces import MemoryStorageDriverFactory, SysConfigInterface
+
+logger = logging.getLogger(__name__)
+
+
+# 记忆模块驱动工厂
+def get_memory_storage_driver() -> MemoryStorageDriverFactory:
+    """获取记忆存储驱动工厂函数，解决循环导入问题"""
+    from ..memory.memory_storage import MemoryStorageDriver
+    return MemoryStorageDriver
+
+
+class SysConfig(SysConfigInterface):
+    """
+    系统配置类，使用新的配置管理系统实现
+    提供与原系统兼容的接口，同时增加了配置验证和版本控制
+    """
+    # 类型注解 - 已经通过实现接口SysConfigInterface来定义
+    
+    def __init__(self) -> None:
+        """初始化系统配置"""
+        # 初始化组件
+        self.bilibili_live_listener = None
+        self.thread_pool_manager = None
+        self.llm_model_driver = LlmModelDriver()
+        self.memory_storage_driver = None
+        
+        # 获取配置管理器
+        self.config_manager = get_config_manager()
+        
+        # 根据环境变量决定使用哪种加载方式
+        use_lite_mode = os.environ.get('USE_LITE_CONFIG', 'false').lower() == 'true'
+        if use_lite_mode:
+            logger.info("使用轻量配置模式初始化...")
+            self._load_lite()
+        else:
+            logger.info("使用完整配置模式初始化...")
+            self._load()
+    
+    def get(self) -> Dict[str, Any]:
+        """
+        获取配置
+        保持与原始接口兼容，但使用新的配置管理系统
+        """
+        # 获取当前配置
+        config = self.config_manager.get_config()
+        
+        # 返回模型转换为字典
+        return config.model_dump()
+    
+    def save(self, sys_config_json: Dict[str, Any]) -> None:
+        """
+        保存配置
+        保持与原始接口兼容，但使用新的配置管理系统
+        """
+        # 使用配置管理器更新配置
+        self.config_manager.update_config(sys_config_json)
+        
+        # 重新加载配置到当前实例
+        self._reload_config_to_instance()
+    
+    def _load_lite(self) -> None:
+        """
+        简化的加载函数，只处理基本配置，不进行复杂初始化
+        使用新的配置管理系统实现
+        """
+        logger.info("正在加载简化版配置...")
+        
+        # 加载配置
+        config = self.config_manager.load()
+        
+        # 应用环境变量
+        self.config_manager.apply_environment_variables()
+        
+        # 加载基本设置到实例变量
+        self._load_config_to_instance(config)
+        
+        logger.info("简化版配置加载完成")
+    
+    def _load(self) -> None:
+        """
+        完整的配置加载功能，包含所有必要的组件初始化
+        使用新的配置管理系统实现
+        """
+        logger.debug("======================== Load SysConfig ========================")
+        
+        # 加载配置
+        config = self.config_manager.load()
+        
+        # 应用环境变量
+        self.config_manager.apply_environment_variables()
+        
+        # 加载基本设置到实例变量
+        self._load_config_to_instance(config)
+        
+        # 初始化角色
+        self._init_character()
+        
+        # 懒加载记忆模块
+        self._init_memory_storage()
+        
+        logger.info("完整版配置加载完成")
+    
+    def _load_config_to_instance(self, config: SystemConfig) -> None:
+        """将配置对象中的值加载到当前实例的属性中"""
+        # 角色配置
+        self.character = config.characterConfig.character
+        self.character_name = config.characterConfig.character_name
+        self.your_name = config.characterConfig.yourName
+        
+        # 对话配置
+        self.conversation_llm_model_driver_type = config.conversationConfig.languageModel
+        
+        # 记忆配置
+        memory_config = config.memoryStorageConfig
+        self.enable_summary = memory_config.enableSummary
+        self.enable_longMemory = memory_config.enableLongMemory
+        self.enable_reflection = memory_config.enableReflection
+        
+        if self.enable_summary:
+            self.summary_llm_model_driver_type = memory_config.languageModelForSummary
+        else:
+            self.summary_llm_model_driver_type = "openai"
+            
+        if self.enable_reflection:
+            self.reflection_llm_model_driver_type = memory_config.languageModelForReflection
+        else:
+            self.reflection_llm_model_driver_type = "openai"
+        
+        # ZEP配置
+        self.zep_url = memory_config.zep_memory.zep_url
+        self.zep_optional_api_key = memory_config.zep_memory.zep_optional_api_key
+    
+    def _reload_config_to_instance(self) -> None:
+        """重新加载配置到当前实例"""
+        # 重新加载配置
+        config = self.config_manager.load(force_reload=True)
+        
+        # 应用环境变量
+        self.config_manager.apply_environment_variables()
+        
+        # 加载基本设置到实例变量
+        self._load_config_to_instance(config)
+    
+    def _init_character(self) -> None:
+        """初始化角色，支持从数据库加载和创建默认角色"""
+        from django.db.utils import OperationalError, ProgrammingError
+        from django.db import connection
+        from ..models import CustomRoleModel
+        from ..character.sys.aili_zh import aili_zh
+        
+        # 获取当前配置
+        config = self.config_manager.get_config()
+        config_dict = config.model_dump()
+        
+        try:
+            # 检查数据库表是否存在
+            tables = connection.introspection.table_names()
+            if 'apps_customrolemodel' not in tables:
+                logger.warning("表 'apps_customrolemodel' 不存在，跳过角色初始化")
+                return
+            
+            result = CustomRoleModel.objects.all()
+            if len(result) == 0:
+                # 创建默认角色
+                logger.debug("=> load default character")
+                custom_role = CustomRoleModel(
+                    role_name=aili_zh.role_name,
+                    persona=aili_zh.persona,
+                    personality=aili_zh.personality,
+                    scenario=aili_zh.scenario,
+                    examples_of_dialogue=aili_zh.examples_of_dialogue,
+                    custom_role_template_type=aili_zh.custom_role_template_type,
+                    role_package_id=-1
+                )
+                custom_role.save()
+                logger.info(f"已创建默认角色: ID={custom_role.id}, 名称={custom_role.role_name}")
+                
+                # 更新配置
+                if "characterConfig" not in config_dict:
+                    config_dict["characterConfig"] = {}
+                
+                config_dict["characterConfig"]["character"] = custom_role.id
+                config_dict["characterConfig"]["character_name"] = custom_role.role_name
+                
+                # 保存配置
+                self.config_manager.update_config(config_dict)
+                
+                # 更新实例属性
+                self.character = custom_role.id
+                self.character_name = custom_role.role_name
+        except (OperationalError, ProgrammingError) as db_err:
+            logger.warning(f"数据库表访问错误，使用默认配置: {str(db_err)}")
+        except Exception as e:
+            logger.error(f"=> load default character ERROR: {str(e)}")
+    
+    def _init_memory_storage(self) -> None:
+        """初始化记忆存储，使用工厂方法"""
+        if not self.enable_longMemory and not self.enable_summary and not self.enable_reflection:
+            logger.info("记忆功能未启用，跳过记忆模块初始化")
+            self.memory_storage_driver = None
+            return
+        
+        try:
+            # 获取当前配置
+            config = self.config_manager.get_config()
+            
+            # 创建记忆存储配置
+            memory_storage_config = {
+                "data_dir": config.memoryStorageConfig.faissMemory.dataDir,
+            }
+            
+            # 使用工厂方法获取MemoryStorageDriver类并创建实例
+            MemoryStorageDriver = get_memory_storage_driver()
+            self.memory_storage_driver = MemoryStorageDriver(
+                memory_storage_config=memory_storage_config, 
+                sys_config=self
+            )
+            logger.info("记忆模块初始化成功")
+        except Exception as e:
+            logger.error(f"初始化记忆模块失败: {str(e)}")
+            self.memory_storage_driver = None
+    
+    # 为了兼容性保留但不实际使用的方法
+    def _create_default_config(self) -> Dict[str, Any]:
+        """创建默认配置（为兼容性保留）"""
+        # 使用配置管理器创建默认配置
+        return self.config_manager.get_config().model_dump()
+    
+    def _save_to_db(self, config_data: Dict[str, Any]) -> None:
+        """保存配置到数据库（为兼容性保留）"""
+        # 使用配置管理器保存到数据库
+        self.config_manager.update_config(config_data) 

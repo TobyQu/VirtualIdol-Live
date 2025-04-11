@@ -97,7 +97,8 @@ export async function chat(
 
   const body = {
     query: message,
-    you_name: you_name
+    you_name: you_name,
+    update_emotion: true // 通知后端更新情绪状态
   };
   
   try {

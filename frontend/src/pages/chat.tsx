@@ -7,6 +7,7 @@ import { PanelLeftClose } from "lucide-react";
 import { useDetachedWindow } from "@/features/windowManager/useDetachedWindow";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { EmotionControlPanel } from '@/components/EmotionControlPanel';
 
 // 为Window对象添加isClosingAllowed属性
 declare global {
@@ -186,11 +187,18 @@ export default function ChatPage() {
                 />
               </TabsContent>
               <TabsContent value="action" className="flex-1 overflow-auto p-4 mt-0">
-                <div className="bg-white rounded-lg p-6 h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <h3 className="text-lg font-medium text-gray-700 mb-2">动作功能即将上线</h3>
-                    <p className="text-sm text-gray-500">这里将展示可用的角色动作和表情</p>
+                {globalConfig?.emotionConfig?.enabled ? (
+                  <EmotionControlPanel className="mb-4" />
+                ) : (
+                  <div className="bg-white rounded-lg p-6 mb-4">
+                    <h3 className="text-lg font-medium text-red-600 mb-2">情绪系统未启用</h3>
+                    <p className="text-sm text-gray-500">请在设置中启用情绪系统以使用此功能</p>
                   </div>
+                )}
+                
+                <div className="bg-white rounded-lg p-6">
+                  <h3 className="text-lg font-medium text-gray-700 mb-2">更多动作功能即将上线</h3>
+                  <p className="text-sm text-gray-500">该区域将展示更多角色动作和表情控制</p>
                 </div>
               </TabsContent>
               <TabsContent value="settings" className="flex-1 overflow-auto p-0 mt-0">

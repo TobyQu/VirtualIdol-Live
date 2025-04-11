@@ -42,8 +42,12 @@ import {damp} from 'three/src/math/MathUtils';
 import {join} from 'path';
 import {voiceData, getVoices, getEmotions} from '@/features/tts/ttsApi';
 import { showSuccess, showError } from "@/lib/toast";
+import { EmotionSettings } from "./settings/emotion-settings";
+import { VoiceSettings } from "./settings/voice-settings";
+import { AssetsSettings } from "./settings/assets-settings";
+import { useForm } from "react-hook-form";
 
-const tabNames = ['基础设置', '自定义角色设置', '大语言模型设置', '记忆模块设置', '高级设置'];
+const tabNames = ['基础设置', '角色设置', '语音设置', '语言模型', '记忆模块', '情绪设置', '高级设置', '资产设置'];
 const llm_enums = ["openai", "ollama",'zhipuai']
 
 const publicDir = join(process.cwd(), 'public');
@@ -97,6 +101,14 @@ export const Settings = ({
                          }: Props) => {
 
     const [currentTab, setCurrentTab] = useState('基础设置');
+    const form = useForm({
+        defaultValues: {
+            ttsVoiceId: "-1",
+            emotion: "neutral",
+            vrmModel: "",
+            backgroundUrl: ""
+        }
+    });
     const [formData, setFormData] = useState<GlobalConfig>({
         characterConfig: {
             character: -1,
@@ -155,7 +167,14 @@ export const Settings = ({
         httpsProxy: '',
         socks5Proxy: '',
         background_id: -1,
-        background_url: ''
+        background_url: '',
+        emotionConfig: {
+            enabled: true,
+            sensitivity: 0.5,
+            changeSpeed: 0.5,
+            defaultEmotion: 'neutral',
+            expressionIntensity: 0.7
+        }
     });
     const [customRoles, setCustomRoles] = useState([custoRoleFormData]);
     const [enableProxy, setEnableProxy] = useState(formData?.enableProxy || false);
@@ -1435,6 +1454,21 @@ export const Settings = ({
         )
     }
 
+    // 添加情绪系统设置组件
+    const EmotionSystemSettings = () => {
+        return (
+            <div className="settings-container">
+                <h2 className="settings-title">情绪系统设置</h2>
+                <div className="settings-content">
+                    <EmotionSettings 
+                        globalConfig={formData} 
+                        onChangeGlobalConfig={setFormData}
+                    />
+                </div>
+            </div>
+        );
+    };
+
     // Tab内容使用过渡动画
     <TransitionGroup>
         <CSSTransition
@@ -1480,10 +1514,26 @@ export const Settings = ({
                     </div>
                     {/* 根据currentTab渲染对应的内容 */}
                     {currentTab === '基础设置' && <BasicSettings/>}
-                    {currentTab === '自定义角色设置' && <CustomRoleSettings/>}
-                    {currentTab === '大语言模型设置' && <LlmSettings/>}
-                    {currentTab === '记忆模块设置' && <MemorySettings/>}
+                    {currentTab === '角色设置' && <CustomRoleSettings/>}
+                    {currentTab === '语音设置' && 
+                        <VoiceSettings 
+                            globalConfig={formData} 
+                            onChangeGlobalConfig={setFormData} 
+                            form={form}
+                        />
+                    }
+                    {currentTab === '语言模型' && <LlmSettings/>}
+                    {currentTab === '记忆模块' && <MemorySettings/>}
+                    {currentTab === '情绪设置' && <EmotionSystemSettings/>}
                     {currentTab === '高级设置' && <AdvancedSettings/>}
+                    {currentTab === '资产设置' && 
+                        <AssetsSettings
+                            globalConfig={formData}
+                            onChangeGlobalConfig={setFormData}
+                            onChangeBackgroundImageUrl={onChangeBackgroundImageUrl}
+                            form={form}
+                        />
+                    }
                 </div>
             </div>
         </div>

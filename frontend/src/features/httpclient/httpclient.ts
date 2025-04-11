@@ -20,12 +20,27 @@ if (environment === "development") {
 
 // 添加一个辅助函数来确保URL路径格式正确
 function ensureTrailingSlash(url: string): string {
-  // 如果URL已经以斜杠结尾，就直接返回
-  if (url.endsWith('/')) {
-    return url;
+  try {
+    // 解析URL以分离路径和查询参数
+    const urlObj = new URL(url, 'http://example.com');
+    const path = urlObj.pathname;
+    const query = urlObj.search; // 包含?
+    
+    // 确保路径以斜杠结尾
+    const pathWithSlash = path.endsWith('/') ? path : `${path}/`;
+    
+    // 返回组合后的URL（不包含基础URL部分）
+    return `${pathWithSlash}${query}`;
+  } catch (error) {
+    // 如果URL解析失败，使用简单的字符串处理
+    if (url.includes('?')) {
+      const [path, query] = url.split('?', 2); // 最多分割成两部分
+      const pathWithSlash = path.endsWith('/') ? path : `${path}/`;
+      return `${pathWithSlash}?${query}`;
+    } else {
+      return url.endsWith('/') ? url : `${url}/`;
+    }
   }
-  // 否则添加斜杠并返回
-  return `${url}/`;
 }
 
 // 定义一个发送POST请求的函数

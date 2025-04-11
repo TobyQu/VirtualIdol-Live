@@ -34,6 +34,7 @@ import { AdvancedSettings } from "./settings/advanced-settings"
 import { AssetsSettings } from "./settings/assets-settings"
 import { showSuccess, showError } from "@/lib/toast"
 import { Card, CardContent } from "./ui/card"
+import { EmotionSettings } from "./settings/emotion-settings"
 
 const llm_enums = ["openai", "ollama", 'zhipuai'];
 
@@ -488,6 +489,7 @@ export function SettingsSheet({
                     <TabsTrigger value="voice" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">语音设置</TabsTrigger>
                     <TabsTrigger value="llm" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">语言模型</TabsTrigger>
                     <TabsTrigger value="memory" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">记忆模块</TabsTrigger>
+                    <TabsTrigger value="emotion" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">情绪设置</TabsTrigger>
                     <TabsTrigger value="advanced" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">高级设置</TabsTrigger>
                     <TabsTrigger value="assets" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">资产设置</TabsTrigger>
                   </TabsList>
@@ -547,6 +549,13 @@ export function SettingsSheet({
                 globalConfig={globalConfig}
                 onChangeGlobalConfig={onChangeGlobalConfig}
                 form={form}
+              />
+            </TabsContent>
+            
+            <TabsContent value="emotion" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
+              <EmotionSettings
+                globalConfig={globalConfig}
+                onChangeGlobalConfig={onChangeGlobalConfig}
               />
             </TabsContent>
             

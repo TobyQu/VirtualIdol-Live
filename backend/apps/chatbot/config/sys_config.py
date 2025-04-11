@@ -35,6 +35,7 @@ def lazy_memory_storage(sys_config_json: any, sys_cofnig: any):
 
 
 class SysConfig:
+    """系统配置类，支持开发模式和完整加载模式"""
     llm_model_driver: LlmModelDriver
     conversation_llm_model_driver_type: str
     enable_summary: bool
@@ -57,90 +58,258 @@ class SysConfig:
     def __init__(self) -> None:
         self.bilibili_live_listener = None
         self.thread_pool_manager = None
-        self.load()
+        self.llm_model_driver = LlmModelDriver()
+        
+        # 根据环境变量决定使用哪种加载方式
+        use_lite_mode = os.environ.get('USE_LITE_CONFIG', 'false').lower() == 'true'
+        if use_lite_mode:
+            logger.info("使用轻量配置模式初始化...")
+            self.load_lite()
+        else:
+            logger.info("使用完整配置模式初始化...")
+            self.load()
 
     def get(self):
-        sys_config_obj = None
-        sys_config_json = "{}"
+        """配置获取函数，优先从文件读取，再尝试从数据库读取"""
+        sys_config_json = {}
         try:
-            # 首先从文件中读取
-            with open(config_path, 'r') as f:
-                sys_config_json = json.load(f)
-                logger.debug(f"从文件读取配置成功: {config_path}")
+            # 从文件中读取配置
+            if os.path.exists(config_path):
+                with open(config_path, 'r') as f:
+                    sys_config_json = json.load(f)
+                    logger.debug(f"从文件读取配置成功: {config_path}")
+            else:
+                # 创建默认配置
+                logger.info("配置文件不存在，创建默认配置")
+                sys_config_json = self._create_default_config()
+                with open(config_path, 'w') as f:
+                    json.dump(sys_config_json, f, indent=2, ensure_ascii=False)
             
-            # 然后尝试从数据库读取
+            # 尝试从数据库读取
             try:
-                sys_config_obj = SysConfigModel.objects.filter(
-                    code=sys_code).first()
-                logger.debug(f"从数据库查询配置结果: {sys_config_obj}")
-                
-                if sys_config_obj == None:
-                    logger.info("数据库中不存在配置，将创建新配置")
-                    sys_config_model = SysConfigModel(
-                        code=sys_code,
-                        config=json.dumps(sys_config_json, ensure_ascii=False)
-                    )
-                    sys_config_model.save()
-                    logger.info(f"成功将配置保存到数据库，代码: {sys_code}")
-                else:
-                    logger.info(f"从数据库读取配置成功，代码: {sys_code}")
-                    # 确保配置是有效的JSON
+                sys_config_obj = SysConfigModel.objects.filter(code=sys_code).first()
+                if sys_config_obj:
+                    # 使用数据库中的配置
                     try:
-                        sys_config_json = json.loads(sys_config_obj.config)
-                        logger.debug(f"解析数据库配置为JSON成功，键数量: {len(sys_config_json)}")
-                    except json.JSONDecodeError as je:
-                        logger.error(f"数据库中的配置不是有效的JSON: {je}")
-                        # 如果数据库中的配置无效，使用文件中的配置
-                        logger.info("将使用文件中的配置作为备份")
-            except Exception as db_err:
-                logger.error(f"从数据库加载配置时出错: {str(db_err)}")
-                logger.info("将使用文件中的配置作为备份")
+                        db_config = json.loads(sys_config_obj.config)
+                        sys_config_json = db_config
+                        logger.info(f"从数据库读取配置成功，代码: {sys_code}")
+                    except json.JSONDecodeError:
+                        logger.error("数据库中的配置不是有效的JSON")
+                else:
+                    # 数据库中没有配置，保存当前配置到数据库
+                    logger.info("数据库中不存在配置，将创建新配置")
+                    self._save_to_db(sys_config_json)
+            except Exception as e:
+                logger.warning(f"从数据库加载配置时出错: {str(e)}")
+                logger.info("将使用文件中的配置")
         except Exception as e:
             logger.error(f"加载系统配置时出错: {str(e)}")
+            sys_config_json = self._create_default_config()
             
         return sys_config_json
 
-    def save(self, sys_config_json: any):
+    def _create_default_config(self):
+        """创建默认配置"""
+        return {
+            "characterConfig": {
+                "character": 1,
+                "character_name": "爱莉",
+                "yourName": "用户",
+                "vrmModel": "/assets/vrm/default.vrm",
+                "vrmModelType": "system"
+            },
+            "languageModelConfig": {
+                "openai": {
+                    "OPENAI_API_KEY": "",
+                    "OPENAI_BASE_URL": ""
+                },
+                "ollama": {
+                    "OLLAMA_API_BASE": "http://localhost:11434",
+                    "OLLAMA_API_MODEL_NAME": "qwen:7b"
+                },
+                "zhipuai": {
+                    "ZHIPUAI_API_KEY": "SK-"
+                }
+            },
+            "enableProxy": False,
+            "httpProxy": "http://host.docker.internal:23457",
+            "httpsProxy": "https://host.docker.internal:23457",
+            "socks5Proxy": "socks5://host.docker.internal:23457",
+            "conversationConfig": {
+                "conversationType": "default",
+                "languageModel": "openai"
+            },
+            "memoryStorageConfig": {
+                "zep_memory": {
+                    "zep_url": "http://localhost:8881",
+                    "zep_optional_api_key": "optional_api_key"
+                },
+                "faissMemory": {
+                    "dataDir": "storage/memory"
+                },
+                "enableLongMemory": False,
+                "enableSummary": False,
+                "languageModelForSummary": "openai",
+                "enableReflection": False,
+                "languageModelForReflection": "openai"
+            },
+            "background_url": "/assets/backgrounds/default.png",
+            "enableLive": False,
+            "liveStreamingConfig": {
+                "B_ROOM_ID": "",
+                "B_COOKIE": ""
+            },
+            "ttsConfig": {
+                "ttsVoiceId": "female-shaonv",
+                "emotion": "neutral",
+                "ttsType": "minimax"
+            }
+        }
+    
+    def _save_to_db(self, config_data):
+        """保存配置到数据库"""
         try:
-            # 确保获取的是字符串形式的配置
-            if isinstance(sys_config_json, dict):
-                config_str = json.dumps(sys_config_json, ensure_ascii=False)
+            if isinstance(config_data, dict):
+                config_str = json.dumps(config_data, ensure_ascii=False)
             else:
-                config_str = str(sys_config_json)
-                
-            logger.info(f"尝试保存配置到数据库, 代码: {sys_code}")
-            logger.debug(f"配置内容前100个字符: {config_str[:100]}...")
+                config_str = str(config_data)
             
-            # 保存到数据库
-            try:
-                sys_config_obj = SysConfigModel.objects.get(code=sys_code)
-                logger.info(f"更新数据库中的配置, ID: {sys_config_obj.id}")
-                sys_config_obj.config = config_str
-                sys_config_obj.save()
-                logger.info("配置已成功更新到数据库")
-            except SysConfigModel.DoesNotExist:
-                logger.info(f"数据库中不存在配置，将创建新配置")
-                SysConfigModel.objects.create(
-                    code=sys_code,
-                    config=config_str
-                )
-                logger.info("新配置已成功创建并保存到数据库")
-                
-            # 同时保存到文件作为备份
+            # 创建新配置记录
+            SysConfigModel.objects.create(
+                code=sys_code,
+                config=config_str
+            )
+            logger.info("配置已保存到数据库")
+        except Exception as e:
+            logger.warning(f"保存配置到数据库失败: {str(e)}")
+
+    def save(self, sys_config_json: any):
+        """保存配置，同时保存到文件和数据库"""
+        try:
+            # 保存到文件
             with open(config_path, 'w') as f:
                 if isinstance(sys_config_json, dict):
                     json.dump(sys_config_json, f, indent=2, ensure_ascii=False)
                 else:
-                    f.write(config_str)
-            logger.info(f"配置已成功保存到文件: {config_path}")
+                    f.write(str(sys_config_json))
+            logger.info(f"配置已保存到文件: {config_path}")
             
+            # 尝试保存到数据库
+            try:
+                if isinstance(sys_config_json, dict):
+                    config_str = json.dumps(sys_config_json, ensure_ascii=False)
+                else:
+                    config_str = str(sys_config_json)
+                
+                # 查找现有配置
+                try:
+                    sys_config_obj = SysConfigModel.objects.get(code=sys_code)
+                    logger.info(f"更新数据库中的配置, ID: {sys_config_obj.id}")
+                    sys_config_obj.config = config_str
+                    sys_config_obj.save()
+                    logger.info("配置已成功更新到数据库")
+                except SysConfigModel.DoesNotExist:
+                    logger.info(f"数据库中不存在配置，将创建新配置")
+                    SysConfigModel.objects.create(
+                        code=sys_code,
+                        config=config_str
+                    )
+                    logger.info("新配置已成功创建并保存到数据库")
+            except Exception as e:
+                logger.warning(f"保存配置到数据库失败: {str(e)}")
         except Exception as e:
-            logger.error(f"保存配置时出错: {str(e)}", exc_info=True)
-            raise e
+            logger.error(f"保存配置失败: {str(e)}")
 
+    def load_lite(self):
+        """简化的加载函数，只处理基本配置，不进行复杂初始化"""
+        logger.info("加载简化版配置...")
+        sys_config_json = self.get()
+        
+        # 设置基本环境变量
+        os.environ['TOKENIZERS_PARALLELISM'] = "false"
+        
+        # 设置角色信息
+        self.character = 1
+        self.character_name = "爱莉"
+        self.yourName = "用户"
+        
+        # 尝试从配置获取角色信息
+        if "characterConfig" in sys_config_json:
+            try:
+                self.character = sys_config_json["characterConfig"].get("character", 1)
+                self.character_name = sys_config_json["characterConfig"].get("character_name", "爱莉")
+                self.yourName = sys_config_json["characterConfig"].get("yourName", "用户")
+            except Exception as e:
+                logger.warning(f"加载角色配置失败: {str(e)}")
+        
+        # 设置LLM环境变量
+        if "languageModelConfig" in sys_config_json:
+            try:
+                # OpenAI
+                openai_config = sys_config_json["languageModelConfig"].get("openai", {})
+                os.environ['OPENAI_API_KEY'] = openai_config.get("OPENAI_API_KEY", "")
+                os.environ['OPENAI_BASE_URL'] = openai_config.get("OPENAI_BASE_URL", "")
+                
+                # Ollama
+                ollama_config = sys_config_json["languageModelConfig"].get("ollama", {})
+                os.environ['OLLAMA_API_BASE'] = ollama_config.get("OLLAMA_API_BASE", "http://localhost:11434")
+                os.environ['OLLAMA_API_MODEL_NAME'] = ollama_config.get("OLLAMA_API_MODEL_NAME", "qwen:7b")
+                
+                # ZhipuAI
+                zhipuai_config = sys_config_json["languageModelConfig"].get("zhipuai", {})
+                os.environ['ZHIPUAI_API_KEY'] = zhipuai_config.get("ZHIPUAI_API_KEY", "SK-")
+            except Exception as e:
+                logger.warning(f"加载语言模型配置失败: {str(e)}")
+        
+        # 设置代理
+        try:
+            enableProxy = sys_config_json.get("enableProxy", False)
+            if enableProxy:
+                os.environ['HTTP_PROXY'] = sys_config_json.get("httpProxy", "")
+                os.environ['HTTPS_PROXY'] = sys_config_json.get("httpsProxy", "")
+                os.environ['SOCKS5_PROXY'] = sys_config_json.get("socks5Proxy", "")
+            else:
+                os.environ['HTTP_PROXY'] = ""
+                os.environ['HTTPS_PROXY'] = ""
+                os.environ['SOCKS5_PROXY'] = ""
+        except Exception as e:
+            logger.warning(f"加载代理配置失败: {str(e)}")
+        
+        # 设置对话配置
+        try:
+            convo_config = sys_config_json.get("conversationConfig", {})
+            self.conversation_llm_model_driver_type = convo_config.get("languageModel", "openai")
+        except Exception as e:
+            logger.warning(f"加载对话配置失败: {str(e)}")
+            self.conversation_llm_model_driver_type = "openai"
+        
+        # 设置记忆配置
+        try:
+            memory_config = sys_config_json.get("memoryStorageConfig", {})
+            self.enable_summary = memory_config.get("enableSummary", False)
+            self.enable_longMemory = memory_config.get("enableLongMemory", False)
+            self.enable_reflection = memory_config.get("enableReflection", False)
+            
+            if self.enable_summary:
+                self.summary_llm_model_driver_type = memory_config.get("languageModelForSummary", "openai")
+            
+            if self.enable_reflection:
+                self.reflection_llm_model_driver_type = memory_config.get("languageModelForReflection", "openai")
+        except Exception as e:
+            logger.warning(f"加载记忆配置失败: {str(e)}")
+            self.enable_summary = False
+            self.enable_longMemory = False
+            self.enable_reflection = False
+        
+        # 记忆模块设为None，简化启动
+        self.memory_storage_driver = None
+        
+        logger.info("简化版配置加载完成")
+        
     def load(self):
-        logger.debug(
-            "======================== Load SysConfig ========================")
+        """完整的配置加载功能，包含所有数据库和组件初始化"""
+        logger.debug("======================== Load SysConfig ========================")
 
         sys_config_json = self.get()
 
@@ -181,40 +350,6 @@ class SysConfig:
                         character = sys_config_json["characterConfig"]["character"]
                         yourName = sys_config_json["characterConfig"]["yourName"]
                         character_name = sys_config_json["characterConfig"]["character_name"]
-                        
-                        # 验证角色ID是否存在
-                        try:
-                            from django.core.exceptions import ObjectDoesNotExist
-                            CustomRoleModel.objects.get(pk=character)
-                            logger.debug(f"已验证角色ID {character} 存在")
-                        except ObjectDoesNotExist:
-                            # 获取第一个可用角色
-                            try:
-                                first_role = CustomRoleModel.objects.first()
-                                if first_role:
-                                    character = first_role.id
-                                    character_name = first_role.role_name
-                                    logger.warning(f"配置中的角色ID {character} 不存在，已切换到第一个可用角色: ID={first_role.id}, 名称={first_role.role_name}")
-                                else:
-                                    logger.error("没有可用角色，将重新创建默认角色")
-                                    custom_role = CustomRoleModel(
-                                        role_name=aili_zh.role_name,
-                                        persona=aili_zh.persona,
-                                        personality=aili_zh.personality,
-                                        scenario=aili_zh.scenario,
-                                        examples_of_dialogue=aili_zh.examples_of_dialogue,
-                                        custom_role_template_type=aili_zh.custom_role_template_type,
-                                        role_package_id=-1
-                                    )
-                                    custom_role.save()
-                                    character = custom_role.id
-                                    character_name = custom_role.role_name
-                                    logger.info(f"已创建并使用默认角色: ID={custom_role.id}, 名称={custom_role.role_name}")
-                            except Exception as role_err:
-                                logger.error(f"获取可用角色失败: {str(role_err)}")
-                                character = 1
-                                character_name = "爱莉"
-                        
                     except KeyError:
                         # 如果配置项不存在，使用默认值
                         logger.error("characterConfig不存在或不完整，使用默认值")
@@ -274,24 +409,6 @@ class SysConfig:
             logger.error("languageModelConfig不存在或不完整，使用默认值")
             os.environ['OPENAI_API_KEY'] = "sk-"
             os.environ['OPENAI_BASE_URL'] = ""
-            # 创建默认配置以便保存
-            if "languageModelConfig" not in sys_config_json:
-                sys_config_json["languageModelConfig"] = {
-                    "openai": {
-                        "OPENAI_API_KEY": "sk-",
-                        "OPENAI_BASE_URL": ""
-                    },
-                    "ollama": {
-                        "OLLAMA_API_BASE": "http://localhost:11434",
-                        "OLLAMA_API_MODEL_NAME": "qwen:7b"
-                    },
-                    "zhipuai": {
-                        "ZHIPUAI_API_KEY": "SK-"
-                    }
-                }
-            # 保存更新后的配置
-            with open(config_path, 'w') as f:
-                json.dump(sys_config_json, f, indent=2, ensure_ascii=False)
 
         try:
             ollama = sys_config_json["languageModelConfig"].get("ollama")
@@ -312,7 +429,6 @@ class SysConfig:
             os.environ['OLLAMA_API_BASE'] = "http://localhost:11434"
             os.environ['OLLAMA_API_MODEL_NAME'] = "qwen:7b"
             os.environ['ZHIPUAI_API_KEY'] = "SK-"
-
 
         # 是否开启proxy
         try:
@@ -336,14 +452,6 @@ class SysConfig:
             os.environ['HTTP_PROXY'] = ""
             os.environ['HTTPS_PROXY'] = ""
             os.environ['SOCKS5_PROXY'] = ""
-            # 创建默认配置
-            sys_config_json["enableProxy"] = enableProxy
-            sys_config_json["httpProxy"] = "http://host.docker.internal:23457"
-            sys_config_json["httpsProxy"] = "https://host.docker.internal:23457" 
-            sys_config_json["socks5Proxy"] = "socks5://host.docker.internal:23457"
-            # 保存更新后的配置
-            with open(config_path, 'w') as f:
-                json.dump(sys_config_json, f, indent=2, ensure_ascii=False)
 
         # 加载对话模块配置
         logger.debug("=> Chat Config")
@@ -354,14 +462,6 @@ class SysConfig:
         except KeyError:
             logger.error("conversationConfig不存在或不完整，使用默认值")
             self.conversation_llm_model_driver_type = "openai"
-            # 创建默认配置
-            if "conversationConfig" not in sys_config_json:
-                sys_config_json["conversationConfig"] = {}
-            sys_config_json["conversationConfig"]["conversationType"] = "default"
-            sys_config_json["conversationConfig"]["languageModel"] = "openai"
-            # 保存更新后的配置
-            with open(config_path, 'w') as f:
-                json.dump(sys_config_json, f, indent=2, ensure_ascii=False)
 
         # 是否开启记忆摘要
         logger.debug("=> Memory Config")
@@ -384,25 +484,6 @@ class SysConfig:
             self.enable_summary = False
             self.enable_longMemory = False
             self.enable_reflection = False
-            # 创建默认配置
-            if "memoryStorageConfig" not in sys_config_json:
-                sys_config_json["memoryStorageConfig"] = {
-                    "zep_memory": {
-                        "zep_url": "http://localhost:8881",
-                        "zep_optional_api_key": "optional_api_key"
-                    },
-                    "faissMemory": {
-                        "dataDir": "storage/memory"
-                    },
-                    "enableLongMemory": False,
-                    "enableSummary": False,
-                    "languageModelForSummary": "openai",
-                    "enableReflection": False,
-                    "languageModelForReflection": "openai"
-                }
-            # 保存更新后的配置
-            with open(config_path, 'w') as f:
-                json.dump(sys_config_json, f, indent=2, ensure_ascii=False)
 
         # 懒加载记忆模块
         try:
@@ -413,19 +494,4 @@ class SysConfig:
             # 如果初始化失败，设置为None
             self.memory_storage_driver = None
 
-        logger.info("=> Load SysConfig Success")
-
-        # 加载直播配置
-        # if self.bili_live_client != None:
-        #     self.bili_live_client.stop()
-        # room_id = str(sys_config_json["liveStreamingConfig"]["B_STATION_ID"])
-        # print("=> liveStreaming Config")
-        # self.room_id = room_id
-        # self.bili_live_client = BiliLiveClient(room_id=room_id)
-        # # 创建后台线程
-        # background_thread = threading.Thread(
-        #     target=asyncio.run(self.bili_live_client.start()))
-        # # 将后台线程设置为守护线程，以便在主线程结束时自动退出
-        # background_thread.daemon = True
-        # # 启动后台线程
-        # background_thread.start()
+        logger.info("完整版配置加载完成")

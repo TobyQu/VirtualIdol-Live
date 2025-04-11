@@ -1,4 +1,5 @@
 from django.db import models
+import json
 
 
 # Create your models here.
@@ -89,3 +90,46 @@ class RolePackageModel(models.Model):
     embed_index_idx_path = models.CharField(max_length=10)
     system_prompt_txt_path = models.CharField(max_length=10)
     role_package = models.FileField(upload_to='role_package/')
+
+
+class EmotionStateModel(models.Model):
+    """情感状态存储模型
+    user_id: 用户ID
+    role_id: 角色ID
+    emotion_state: 情感状态JSON
+    last_update: 最后更新时间
+    """
+    user_id = models.BigIntegerField(db_comment="用户ID")
+    role_id = models.IntegerField(db_comment="角色ID")
+    emotion_state = models.TextField(db_comment="情感状态JSON")
+    last_update = models.DateTimeField(auto_now=True, db_comment="最后更新时间")
+
+    class Meta:
+        unique_together = ('user_id', 'role_id')
+        db_table = 'emotion_state'
+        db_table_comment = '情感状态存储表'
+
+    def __str__(self):
+        return f"User {self.user_id} - Role {self.role_id}"
+
+    def get_emotion_state(self) -> dict:
+        """获取情感状态字典"""
+        try:
+            return json.loads(self.emotion_state)
+        except json.JSONDecodeError:
+            return {}
+
+    def set_emotion_state(self, state: dict):
+        """设置情感状态"""
+        self.emotion_state = json.dumps(state)
+        self.save()
+
+    @classmethod
+    def get_or_create_state(cls, user_id: int, role_id: int) -> 'EmotionStateModel':
+        """获取或创建情感状态"""
+        state, created = cls.objects.get_or_create(
+            user_id=user_id,
+            role_id=role_id,
+            defaults={'emotion_state': '{}'}
+        )
+        return state
