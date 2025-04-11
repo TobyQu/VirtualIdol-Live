@@ -20,13 +20,13 @@ check_database() {
     print_message "检查数据库文件..."
     
     # 确保数据库目录存在
-    mkdir -p db
+    mkdir -p backend/storage/db
     
     # 检查数据库文件是否存在
-    if [ ! -f "db/db.sqlite3" ]; then
+    if [ ! -f "backend/storage/db/db.sqlite3" ]; then
         print_message "数据库文件不存在，创建空数据库文件..."
-        touch db/db.sqlite3
-        chmod 777 db/db.sqlite3
+        touch backend/storage/db/db.sqlite3
+        chmod 777 backend/storage/db/db.sqlite3
     fi
 }
 
@@ -59,6 +59,16 @@ start_backend() {
         cd "$CURRENT_DIR"
         exit 1
     }
+    
+    # 检查并执行数据库迁移
+    print_message "检查数据库迁移状态..."
+    MIGRATION_CHECK=$(python3 manage.py showmigrations --list | grep -c "\[ \]")
+    if [ $MIGRATION_CHECK -gt 0 ]; then
+        print_message "发现未应用的迁移，正在应用数据库迁移..."
+        python3 manage.py migrate
+    else
+        print_message "数据库迁移已是最新状态"
+    fi
     
     # 启动后端服务
     print_message "启动Django服务器..."

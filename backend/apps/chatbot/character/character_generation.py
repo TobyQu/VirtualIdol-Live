@@ -18,8 +18,23 @@ class CharacterGeneration():
 
     def get_character(self, role_id: int) -> Character:
         '''获取角色定义对象'''
+        import logging
+        logger = logging.getLogger(__name__)
+        
         try:
-            character_model = get_object_or_404(CustomRoleModel, pk=role_id)
+            # 尝试直接通过ID查询
+            try:
+                character_model = CustomRoleModel.objects.get(pk=role_id)
+            except CustomRoleModel.DoesNotExist:
+                logger.error(f"找不到ID为{role_id}的角色，尝试获取第一个可用角色")
+                # 尝试获取第一个角色
+                character_model = CustomRoleModel.objects.first()
+                
+                # 如果仍然没有角色，使用默认角色
+                if not character_model:
+                    logger.error(f"数据库中不存在任何角色，使用默认角色")
+                    return aili_zh
+                
             character = Character(
                 role_name=character_model.role_name,
                 persona=character_model.persona,
@@ -31,8 +46,6 @@ class CharacterGeneration():
             )
         except Exception as e:
             # 如果找不到角色，使用默认角色
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"找不到ID为{role_id}的角色，使用默认角色: {str(e)}")
             character = aili_zh
         

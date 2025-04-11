@@ -53,10 +53,20 @@ class ProcessCore():
 
             # 检索关联的短期记忆和长期记忆
             try:
-                short_history = singleton_sys_config.memory_storage_driver.search_short_memory(
-                    query_text=query, you_name=you_name, role_name=role_name)
-                long_history = singleton_sys_config.memory_storage_driver.search_lang_memory(
-                    query_text=query, you_name=you_name, role_name=role_name)
+                short_history = []
+                long_history = ""
+                
+                # 确保记忆驱动存在
+                if singleton_sys_config.memory_storage_driver is not None:
+                    short_history = singleton_sys_config.memory_storage_driver.search_short_memory(
+                        query_text=query, you_name=you_name, role_name=role_name)
+                    
+                    # 只有在启用长期记忆功能时才检索长期记忆
+                    if singleton_sys_config.enable_longMemory:
+                        long_history = singleton_sys_config.memory_storage_driver.search_lang_memory(
+                            query_text=query, you_name=you_name, role_name=role_name)
+                else:
+                    logger.warning("记忆驱动未初始化，跳过记忆检索")
             except Exception as e:
                 logger.error(f"检索记忆失败: {str(e)}")
                 short_history = []

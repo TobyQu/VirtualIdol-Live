@@ -17,6 +17,11 @@ logger = logging.getLogger(__name__)
 def lazy_memory_storage(sys_config_json: any, sys_cofnig: any):
     from ..memory.memory_storage import MemoryStorageDriver
     try:
+        # 检查配置是否完整
+        if not sys_config_json.get("memoryStorageConfig"):
+            logger.warning("记忆模块配置缺失，跳过初始化")
+            return None
+            
         # 加载记忆模块配置
         memory_storage_config = {
             "data_dir": sys_config_json.get("memoryStorageConfig", {}).get("faissMemory", {}).get("dataDir", "storage/memory"),
@@ -31,7 +36,14 @@ def lazy_memory_storage(sys_config_json: any, sys_cofnig: any):
             "data_dir": "storage/memory"
         }
         logger.debug(f"=> 使用默认memory_storage_config:{default_memory_storage_config}")
-        return MemoryStorageDriver(memory_storage_config=default_memory_storage_config, sys_config=sys_cofnig)
+        try:
+            return MemoryStorageDriver(memory_storage_config=default_memory_storage_config, sys_config=sys_cofnig)
+        except Exception as inner_e:
+            logger.error(f"使用默认配置初始化记忆模块失败: {str(inner_e)}")
+            return None
+    except Exception as e:
+        logger.error(f"初始化记忆模块失败: {str(e)}")
+        return None
 
 
 class SysConfig:
@@ -350,6 +362,30 @@ class SysConfig:
                         character = sys_config_json["characterConfig"]["character"]
                         yourName = sys_config_json["characterConfig"]["yourName"]
                         character_name = sys_config_json["characterConfig"]["character_name"]
+                        
+                        # 检查指定的角色ID是否存在
+                        role_exists = CustomRoleModel.objects.filter(id=character).exists()
+                        if not role_exists:
+                            logger.warning(f"配置中指定的角色ID {character} 不存在，尝试使用第一个可用角色")
+                            first_role = CustomRoleModel.objects.first()
+                            if first_role:
+                                character = first_role.id
+                                character_name = first_role.role_name
+                            else:
+                                # 如果没有任何角色，创建默认角色
+                                custom_role = CustomRoleModel(
+                                    role_name=aili_zh.role_name,
+                                    persona=aili_zh.persona,
+                                    personality=aili_zh.personality,
+                                    scenario=aili_zh.scenario,
+                                    examples_of_dialogue=aili_zh.examples_of_dialogue,
+                                    custom_role_template_type=aili_zh.custom_role_template_type,
+                                    role_package_id=-1
+                                )
+                                custom_role.save()
+                                logger.info(f"已创建默认角色: ID={custom_role.id}, 名称={custom_role.role_name}")
+                                character = custom_role.id
+                                character_name = custom_role.role_name
                     except KeyError:
                         # 如果配置项不存在，使用默认值
                         logger.error("characterConfig不存在或不完整，使用默认值")

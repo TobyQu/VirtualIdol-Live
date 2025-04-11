@@ -14,7 +14,7 @@
 
 ```bash
 # 备份数据库配置(如果使用SQLite)
-cp db.sqlite3 db.sqlite3.backup
+cp backend/storage/db/db.sqlite3 backend/storage/db/db.sqlite3.backup
 
 # 备份配置文件
 cp backend/apps/chatbot/config/sys_config.json backend/apps/chatbot/config/sys_config.json.backup
