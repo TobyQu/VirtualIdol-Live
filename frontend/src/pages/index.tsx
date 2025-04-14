@@ -29,6 +29,8 @@ import Head from "next/head";
 import { EmotionIndicator } from '@/components/EmotionIndicator';
 import { EmotionControlPanel } from '@/components/EmotionControlPanel';
 import Link from "next/link";
+import { AnimationSettings } from "@/components/settings/animation-settings";
+import { Card, CardContent } from "@/components/ui/card";
 
 // 为Window对象添加isClosingAllowed属性
 declare global {
@@ -715,7 +717,7 @@ function AppContent({
                                     key={subtitle} // 添加key属性，确保文本变化时组件重新挂载
                                     text={subtitle || ""}  // 确保传递空字符串而非undefined
                                     emote={currentEmote}
-                                    position="top"
+                                    position="bottom"
                                     typingDelay={typingDelay}
                                     maxChunkLength={80}
                                     autoHideDelay={5000}
@@ -784,19 +786,11 @@ function AppContent({
                                                     />
                                                 </TabsContent>
                                                 <TabsContent value="action" className="flex-1 overflow-auto p-4 mt-0">
-                                                    {globalConfig?.emotionConfig?.enabled ? (
-                                                        <EmotionControlPanel className="mb-4" />
-                                                    ) : (
-                                                        <div className="bg-white rounded-lg p-6 mb-4">
-                                                            <h3 className="text-lg font-medium text-red-600 mb-2">情绪系统未启用</h3>
-                                                            <p className="text-sm text-gray-500">请在设置中启用情绪系统以使用此功能</p>
-                                                        </div>
-                                                    )}
-                                                    
-                                                    <div className="bg-white rounded-lg p-6">
-                                                        <h3 className="text-lg font-medium text-gray-700 mb-2">更多动作功能即将上线</h3>
-                                                        <p className="text-sm text-gray-500">该区域将展示更多角色动作和表情控制</p>
-                                                    </div>
+                                                   <Card className="border-0 shadow-none">
+                                                     <CardContent className="p-0">
+                                                       <AnimationSettings />
+                                                     </CardContent>
+                                                   </Card>
                                                 </TabsContent>
                                                 <TabsContent value="settings" className="flex-1 overflow-auto p-0 mt-0">
                                                     <SettingsSheet

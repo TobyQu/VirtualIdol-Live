@@ -32,9 +32,9 @@ import { LLMSettings } from "./settings/llm-settings"
 import { MemorySettings } from "./settings/memory-settings"
 import { AdvancedSettings } from "./settings/advanced-settings"
 import { AssetsSettings } from "./settings/assets-settings"
+import { AnimationSettings } from "./settings/animation-settings"
 import { showSuccess, showError } from "@/lib/toast"
 import { Card, CardContent } from "./ui/card"
-import { EmotionSettings } from "./settings/emotion-settings"
 import { z } from "zod"
 
 const llm_enums = ["openai", "ollama", 'zhipuai'];
@@ -509,26 +509,34 @@ export function SettingsSheet({
                 {/* TabsList容器 */}
                 <div className="w-full relative">
                   <TabsList 
-                    className={`flex w-full overflow-x-auto scroll-hidden p-1.5 bg-gradient-to-b from-background to-muted/60 rounded-lg shadow-md border ${isDetachedWindow ? 'detached-tabs-list' : ''}`}
+                    className="flex bg-muted/40 overflow-x-auto overflow-y-hidden max-w-full w-full justify-start"
                     ref={tabsListRef}
                   >
-                    <TabsTrigger value="basic" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">基础设置</TabsTrigger>
-                    <TabsTrigger value="character" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">角色设置</TabsTrigger>
-                    <TabsTrigger value="voice" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">语音设置</TabsTrigger>
+                    {showLeftScroll && (
+                      <button
+                        className="absolute left-0 z-20 h-full px-2 backdrop-blur-sm bg-gradient-to-r from-white/90 to-white/50"
+                        onClick={scrollTabsLeft}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                    )}
+                    
+                    <TabsTrigger value="general" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">角色设置</TabsTrigger>
                     <TabsTrigger value="llm" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">语言模型</TabsTrigger>
-                    <TabsTrigger value="memory" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">记忆模块</TabsTrigger>
-                    <TabsTrigger value="emotion" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">情绪设置</TabsTrigger>
+                    <TabsTrigger value="voice" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">语音设置</TabsTrigger>
+                    <TabsTrigger value="memory" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">记忆系统</TabsTrigger>
                     <TabsTrigger value="advanced" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">高级设置</TabsTrigger>
-                    <TabsTrigger value="assets" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">资产设置</TabsTrigger>
+                    <TabsTrigger value="assets" className="text-sm whitespace-nowrap font-medium mx-1 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm flex-shrink-0">资源管理</TabsTrigger>
+                    
+                    {showRightScroll && (
+                      <button
+                        className="absolute right-0 z-20 h-full px-2 backdrop-blur-sm bg-gradient-to-l from-white/90 to-white/50"
+                        onClick={scrollTabsRight}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    )}
                   </TabsList>
-                </div>
-                
-                {/* 右滚动渐变区域（替代独立按钮） */}
-                <div
-                  onClick={scrollTabsRight}
-                  className={`absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-background via-background/90 to-transparent z-20 flex items-center justify-end pr-1 cursor-pointer ${showRightScroll ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                >
-                  <ChevronRight className="h-5 w-5 text-primary drop-shadow-md" />
                 </div>
               </div>
             </div>
@@ -543,7 +551,7 @@ export function SettingsSheet({
               />
             </TabsContent>
             
-            <TabsContent value="character" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
+            <TabsContent value="general" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
               <CharacterSettings
                 globalConfig={globalConfig}
                 onChangeGlobalConfig={onChangeGlobalConfig}
@@ -556,16 +564,16 @@ export function SettingsSheet({
               />
             </TabsContent>
             
-            <TabsContent value="voice" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
-              <VoiceSettings
+            <TabsContent value="llm" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
+              <LLMSettings
                 globalConfig={globalConfig}
                 onChangeGlobalConfig={onChangeGlobalConfig}
                 form={form}
               />
             </TabsContent>
             
-            <TabsContent value="llm" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
-              <LLMSettings
+            <TabsContent value="voice" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
+              <VoiceSettings
                 globalConfig={globalConfig}
                 onChangeGlobalConfig={onChangeGlobalConfig}
                 form={form}
@@ -577,13 +585,6 @@ export function SettingsSheet({
                 globalConfig={globalConfig}
                 onChangeGlobalConfig={onChangeGlobalConfig}
                 form={form}
-              />
-            </TabsContent>
-            
-            <TabsContent value="emotion" className="p-4 rounded-lg border bg-card shadow-sm mb-4">
-              <EmotionSettings
-                globalConfig={globalConfig}
-                onChangeGlobalConfig={onChangeGlobalConfig}
               />
             </TabsContent>
             

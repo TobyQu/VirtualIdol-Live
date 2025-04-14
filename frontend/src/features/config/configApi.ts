@@ -34,6 +34,7 @@ export interface CharacterConfig {
     yourName: string;
     vrmModel: string;
     vrmModelType: string;
+    modelScale: number;
 }
 
 export interface TTSConfig {
@@ -127,7 +128,8 @@ export const initialFormData = {
         "character_name": "爱莉",
         "yourName": "yuki129",
         "vrmModel": "\u308f\u305f\u3042\u3081_03.vrm",
-        "vrmModelType": "system"
+        "vrmModelType": "system",
+        "modelScale": 1.0
     },
     "conversationConfig": {
         "conversationType": "default",
@@ -154,6 +156,13 @@ export const initialFormData = {
         "ttsType": "minimax",
         "ttsVoiceId": "female-shaonv",
         "emotion": "neutral"
+    },
+    "emotionConfig": {
+        "enabled": true,
+        "sensitivity": 0.5,
+        "changeSpeed": 0.5,
+        "defaultEmotion": "neutral",
+        "expressionIntensity": 0.7
     }
 }
 

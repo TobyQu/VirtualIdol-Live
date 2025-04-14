@@ -110,13 +110,15 @@ export default function VrmViewer({
 
       const vrmModel = globalConfig.characterConfig?.vrmModel || initialFormData.characterConfig.vrmModel;
       const vrmModelType = globalConfig.characterConfig?.vrmModelType || initialFormData.characterConfig.vrmModelType;
+      // 获取模型缩放比例
+      const modelScale = globalConfig.characterConfig?.modelScale || initialFormData.characterConfig.modelScale;
       
       // 如果vrmModel以"/assets/"开头，则是assets目录中的文件
       if (vrmModel.startsWith('/assets/')) {
-        viewer.loadVrm(vrmModel);
+        viewer.loadVrm(vrmModel, modelScale);
       } else {
         const url = buildVrmModelUrl(vrmModel, vrmModelType);
-        viewer.loadVrm(url);
+        viewer.loadVrm(url, modelScale);
       }
     }
   }, [viewer, globalConfig, updateLoadingStage]);
@@ -130,13 +132,15 @@ export default function VrmViewer({
           const config = data || initialFormData;
           const vrmModel = config.characterConfig?.vrmModel || initialFormData.characterConfig.vrmModel;
           const vrmModelType = config.characterConfig?.vrmModelType || initialFormData.characterConfig.vrmModelType;
+          // 获取模型缩放比例
+          const modelScale = config.characterConfig?.modelScale || initialFormData.characterConfig.modelScale;
           
           // 如果vrmModel以"/assets/"开头，则是assets目录中的文件
           if (vrmModel.startsWith('/assets/')) {
-            viewer.loadVrm(vrmModel);
+            viewer.loadVrm(vrmModel, modelScale);
           } else {
             const url = buildVrmModelUrl(vrmModel, vrmModelType);
-            viewer.loadVrm(url);
+            viewer.loadVrm(url, modelScale);
           }
           
           // Drag and DropでVRMを差し替え
@@ -166,7 +170,9 @@ export default function VrmViewer({
               setLoadingStages(prev => prev.map(stage => ({ ...stage, completed: false })));
               updateLoadingStage('background', true); // 背景不需要重新加载
               
-              viewer.loadVrm(url);
+              // 使用当前配置中的缩放比例
+              const modelScale = globalConfig.characterConfig?.modelScale || initialFormData.characterConfig.modelScale;
+              viewer.loadVrm(url, modelScale);
             }
           });
         }).catch(error => {
@@ -176,11 +182,11 @@ export default function VrmViewer({
             initialFormData.characterConfig.vrmModel,
             initialFormData.characterConfig.vrmModelType
           );
-          viewer.loadVrm(url);
+          viewer.loadVrm(url, initialFormData.characterConfig.modelScale);
         });
       }
     },
-    [viewer, updateLoadingStage]
+    [viewer, updateLoadingStage, globalConfig]
   );
 
   useEffect(() => {

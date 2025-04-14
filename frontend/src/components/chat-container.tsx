@@ -105,14 +105,6 @@ export function ChatContainer({
           <div className="flex items-center gap-2">
             <MessageCircle className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">{characterName}的对话</span>
-            {globalConfig?.emotionConfig?.enabled && (
-              <EmotionIndicator 
-                className="ml-2" 
-                showIntensity={false}
-                inConversation={true}
-                refreshInterval={10000}
-              />
-            )}
           </div>
           {onResetChat && (
             <Button 

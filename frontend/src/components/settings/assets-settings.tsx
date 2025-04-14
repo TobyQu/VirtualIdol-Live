@@ -11,6 +11,7 @@ import { UseFormReturn } from "react-hook-form"
 import { Trash2, Upload } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { showSuccess, showError, showInfo } from "@/lib/toast"
+import { Slider } from "@/components/ui/slider"
 
 type AssetsSettingsProps = {
   globalConfig: GlobalConfig
@@ -419,6 +420,90 @@ export function AssetsSettings({
                     )}
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* 添加模型缩放设置卡片 */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">模型缩放设置</CardTitle>
+              <CardDescription>调整3D模型的显示大小</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <FormField
+                  control={form.control}
+                  name="modelScale"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium text-foreground/70">模型缩放比例 {(globalConfig?.characterConfig?.modelScale || 1.0).toFixed(2)}</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">0.5</span>
+                          <Slider
+                            value={[globalConfig?.characterConfig?.modelScale || 1.0]}
+                            min={0.5}
+                            max={1.5}
+                            step={0.01}
+                            onValueChange={(values) => {
+                              const scale = values[0];
+                              field.onChange(scale);
+                              
+                              // 更新全局配置
+                              onChangeGlobalConfig({
+                                ...globalConfig,
+                                characterConfig: {
+                                  ...globalConfig.characterConfig,
+                                  modelScale: scale
+                                }
+                              });
+                              
+                              // 直接更新模型缩放，实现实时效果
+                              if (viewer && viewer.model) {
+                                // 应用新的缩放
+                                viewer.model.setScale(scale);
+                                
+                                // 立即重置相机以跟随模型变化
+                                viewer.resetCamera();
+                                
+                                // 添加连续更新以稳定物理效果 (特别是头发和衣服)
+                                if (viewer.model.vrm && viewer.model.vrm.springBoneManager) {
+                                  try {
+                                    // 创建一个函数，连续更新几次物理系统以稳定头发
+                                    let updateCount = 0;
+                                    const maxUpdates = 30; // 连续更新30次以稳定物理
+                                    
+                                    const stabilizePhysics = () => {
+                                      if (updateCount < maxUpdates && viewer.model?.vrm) {
+                                        try {
+                                          // 强制更新物理系统
+                                          viewer.model.vrm.update(0.016);
+                                          updateCount++;
+                                          requestAnimationFrame(stabilizePhysics);
+                                        } catch (err) {
+                                          console.warn("稳定物理时出错:", err);
+                                          // 出错时停止更新循环
+                                        }
+                                      }
+                                    };
+                                    
+                                    // 开始稳定物理效果
+                                    stabilizePhysics();
+                                  } catch (error) {
+                                    console.warn("初始化物理稳定过程时出错:", error);
+                                    // 错误处理，确保不影响UI响应
+                                  }
+                                }
+                              }
+                            }}
+                          />
+                          <span className="text-xs">1.5</span>
+                        </div>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               </div>
             </CardContent>
           </Card>

@@ -42,12 +42,11 @@ import {damp} from 'three/src/math/MathUtils';
 import {join} from 'path';
 import {voiceData, getVoices, getEmotions} from '@/features/tts/ttsApi';
 import { showSuccess, showError } from "@/lib/toast";
-import { EmotionSettings } from "./settings/emotion-settings";
 import { VoiceSettings } from "./settings/voice-settings";
 import { AssetsSettings } from "./settings/assets-settings";
 import { useForm } from "react-hook-form";
 
-const tabNames = ['基础设置', '角色设置', '语音设置', '语言模型', '记忆模块', '情绪设置', '高级设置', '资产设置'];
+const tabNames = ['基础设置', '角色设置', '语音设置', '语言模型', '记忆模块', '高级设置', '资产设置'];
 const llm_enums = ["openai", "ollama",'zhipuai']
 
 const publicDir = join(process.cwd(), 'public');
@@ -1360,23 +1359,36 @@ export const Settings = ({
     }
 
     const EditCustomRole = () => {
-        // 编辑角色
         return (
-            <div className="globals-settings">
-                <div className="section">
-                    <div className="field-"></div>
-                    {enableCreateRole == true ? (
-                        <label>创建角色</label>) : (<label>编辑角色</label>)}
-                    <label>角色名称</label>
-                    <input
-                        type="text"
-                        name="role_name"
-                        defaultValue={customRole.role_name}
-                        onChange={e => {
-                            customRole.role_name = e.target.value
-                            setCustomRole(customRole)
-                        }}
-                    />
+            <div className="settings-container">
+                <h2 className="settings-title">编辑角色</h2>
+                <div className="settings-content">
+                    <div className="field">
+                        <label>角色名称</label>
+                        <select
+                            name="id"
+                            defaultValue={customRole?.id || "-1"}
+                            onChange={e => {
+                                customroleList().then(data => {
+                                    setCustomRoles(data)
+                                    let _role = data.find(v => v.id === parseInt(e.target.value))
+                                    if (_role) {
+                                        setCustomRole(_role)
+                                        setEnableCreateRole(false)
+                                    } else {
+                                        setCustomRole(custoRoleFormData)
+                                        setEnableCreateRole(true)
+                                    }
+                                    setDeleteCustomRoleLog("")
+                                    setCustomRoleLog("")
+                                });
+                            }}
+                        >
+                            <option key="-1" value="-1" data-key="-1">新建角色</option>
+                            {customRoles.map(r => <option key={r.id} value={r.id || ""}>{r.persona}</option>)}
+                        </select>
+                    </div>
+
                     <div className="input-group">
                         <label>角色基本信息定义</label>
                         <textarea
@@ -1454,21 +1466,6 @@ export const Settings = ({
         )
     }
 
-    // 添加情绪系统设置组件
-    const EmotionSystemSettings = () => {
-        return (
-            <div className="settings-container">
-                <h2 className="settings-title">情绪系统设置</h2>
-                <div className="settings-content">
-                    <EmotionSettings 
-                        globalConfig={formData} 
-                        onChangeGlobalConfig={setFormData}
-                    />
-                </div>
-            </div>
-        );
-    };
-
     // Tab内容使用过渡动画
     <TransitionGroup>
         <CSSTransition
@@ -1524,7 +1521,6 @@ export const Settings = ({
                     }
                     {currentTab === '语言模型' && <LlmSettings/>}
                     {currentTab === '记忆模块' && <MemorySettings/>}
-                    {currentTab === '情绪设置' && <EmotionSystemSettings/>}
                     {currentTab === '高级设置' && <AdvancedSettings/>}
                     {currentTab === '资产设置' && 
                         <AssetsSettings

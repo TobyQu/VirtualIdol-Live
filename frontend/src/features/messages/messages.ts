@@ -48,14 +48,24 @@ export const textsToScreenplay = (
   emote: string
 ): Screenplay[] => {
   const screenplays: Screenplay[] = [];
+  
+  // 检查texts是否为null或空数组
+  if (!texts || texts.length === 0) {
+    console.warn("textsToScreenplay收到空数组，返回空结果");
+    return screenplays;
+  }
+  
+  // 确保emote有效
+  const validEmote = emote || "neutral";
+  
   for (let i = 0; i < texts.length; i++) {
     const text = texts[i];
-    if (text == null) {
-      console.warn("textsToScreenplay收到null或undefined文本，已跳过");
+    if (text == null || text.trim() === "") {
+      console.warn("textsToScreenplay收到null或空文本，已跳过");
       continue;
     }
     const message = text.replace(/\[(.*?)\]/g, "");
-    let expression = emote;
+    let expression = validEmote;
     screenplays.push({
       expression: expression as EmotionType,
       talk: {

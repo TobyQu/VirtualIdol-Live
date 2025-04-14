@@ -238,7 +238,7 @@ const SubtitleBubbleBase: React.FC<SubtitleBubbleProps> = ({
   // 根据位置确定样式类
   const positionClass = position === "top" 
     ? "top-28" 
-    : "bottom-32";
+    : "bottom-48";
 
   return (
     <div 
@@ -275,17 +275,17 @@ const SubtitleBubbleBase: React.FC<SubtitleBubbleProps> = ({
         
         {/* 气泡尖角 - 使用position值决定朝向 */}
         {position === "top" ? (
-          <div className="absolute left-1/2 transform -translate-x-1/2" style={{ top: '-13px' }}>
-            <svg width="26" height="13" viewBox="0 0 26 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M2 13L13 2L24 13H2Z" fill="white"/>
-              <path d="M1 13L13 1L25 13" stroke="#FF8000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-        ) : (
           <div className="absolute left-1/2 transform -translate-x-1/2" style={{ bottom: '-13px' }}>
             <svg width="26" height="13" viewBox="0 0 26 13" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M2 0L13 11L24 0H2Z" fill="white"/>
               <path d="M1 0L13 12L25 0" stroke="#FF8000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        ) : (
+          <div className="absolute left-1/2 transform -translate-x-1/2" style={{ top: '-13px' }}>
+            <svg width="26" height="13" viewBox="0 0 26 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M2 13L13 2L24 13H2Z" fill="white"/>
+              <path d="M1 13L13 1L25 13" stroke="#FF8000" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
         )}

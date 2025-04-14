@@ -65,12 +65,12 @@ export class Viewer {
         this._events[eventName].forEach(callback => callback());
     }
 
-    public loadVrm(url: string) {
+    public loadVrm(url: string, scale: number = 1.0) {
         if (this.model?.vrm) {
             this.unloadVRM();
         }
 
-        console.log("Loading VRM model:", url);
+        console.log("Loading VRM model:", url, "with scale:", scale);
         
         // 添加简单的URL验证
         if (!url || url.trim() === '') {
@@ -80,7 +80,7 @@ export class Viewer {
 
         // gltf and vrm
         this.model = new Model(this._camera || new THREE.Object3D());
-        this.model.loadVRM(url).then(async () => {
+        this.model.loadVRM(url, scale).then(async () => {
             if (!this.model?.vrm) {
                 console.error("Failed to load VRM model:", url);
                 return;
@@ -123,6 +123,7 @@ export class Viewer {
                 // 后台加载其他动画
                 setTimeout(async () => {
                     const animationPromises = [
+                        // 日常动作
                         this.loadAnimationSafely("idle_02", "/assets/animations/daily/idle_02.fbx"),
                         this.loadAnimationSafely("idle_03", "/assets/animations/daily/idle_03.fbx"),
                         this.loadAnimationSafely("idle_happy_01", "/assets/animations/daily/idle_happy_01.fbx"),
@@ -130,7 +131,14 @@ export class Viewer {
                         this.loadAnimationSafely("idle_happy_03", "/assets/animations/daily/idle_happy_03.fbx"),
                         this.loadAnimationSafely("standing_greeting", "/assets/animations/daily/standing_greeting.fbx"),
                         this.loadAnimationSafely("thinking", "/assets/animations/daily/thinking.fbx"),
-                        this.loadAnimationSafely("excited", "/assets/animations/emote/excited.fbx")
+                        
+                        // 表情动作
+                        this.loadAnimationSafely("excited", "/assets/animations/emote/excited.fbx"),
+                        this.loadAnimationSafely("angry", "/assets/animations/emote/angry.fbx"),
+                        
+                        // 舞蹈动作
+                        this.loadAnimationSafely("silly_dancing", "/assets/animations/dance/silly_dancing.fbx"),
+                        this.loadAnimationSafely("rumba_dancing", "/assets/animations/dance/rumba_dancing.fbx")
                     ];
                     
                     // 等待所有动画加载完成
@@ -146,6 +154,34 @@ export class Viewer {
             // HACK: アニメーションの原点がずれているので再生後にカメラ位置を調整する
             requestAnimationFrame(() => {
                 this.resetCamera();
+                
+                // 稳定物理效果，特别是头发和衣服
+                if (this.model?.vrm?.springBoneManager) {
+                    try {
+                        let updateCount = 0;
+                        const maxUpdates = 30; // 连续更新30次以稳定物理
+                        
+                        const stabilizePhysics = () => {
+                            if (updateCount < maxUpdates && this.model?.vrm) {
+                                try {
+                                    // 强制更新物理系统
+                                    this.model.vrm.update(0.016);
+                                    updateCount++;
+                                    requestAnimationFrame(stabilizePhysics);
+                                } catch (err) {
+                                    console.warn("稳定物理系统时出错:", err);
+                                    // 出错时停止更新循环
+                                }
+                            }
+                        };
+                        
+                        // 开始稳定物理效果
+                        stabilizePhysics();
+                    } catch (error) {
+                        console.warn("初始化物理稳定过程时出错:", error);
+                        // 错误处理，确保不影响模型加载
+                    }
+                }
             });
         }).catch(error => {
             console.error("加载VRM模型失败:", error);
@@ -237,12 +273,27 @@ export class Viewer {
 
         if (headNode) {
             const headWPos = headNode.getWorldPosition(new THREE.Vector3());
+            
+            // 更新控制器的目标点为头部位置
+            this._cameraControls?.target.set(headWPos.x, headWPos.y, headWPos.z);
+            
+            // 根据模型缩放调整相机位置
+            const scale = this.model?.modelScale || 1.0;
+            
+            // 设置相机位置，高度与头部一致
             this._camera?.position.set(
                 this._camera.position.x,
                 headWPos.y,
                 this._camera.position.z
             );
-            this._cameraControls?.target.set(headWPos.x, headWPos.y, headWPos.z);
+            
+            // 根据模型缩放调整控制器的距离限制
+            if (this._cameraControls) {
+                this._cameraControls.minDistance = 0.5 * scale;
+                this._cameraControls.maxDistance = 5.0 * scale;
+            }
+            
+            // 更新控制器
             this._cameraControls?.update();
         }
     }
@@ -265,7 +316,7 @@ export class Viewer {
     };
 
     // 安全地加载动画的辅助方法
-    private async loadAnimationSafely(animName: string, animPath: string): Promise<void> {
+    public async loadAnimationSafely(animName: string, animPath: string): Promise<void> {
         if (!this.model || !this.model.vrm) {
             console.warn(`无法加载动画 ${animName}：VRM模型未加载`);
             return;
