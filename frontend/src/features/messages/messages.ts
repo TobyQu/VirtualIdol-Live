@@ -23,6 +23,7 @@ export type Talk = {
   speakerX: number;
   speakerY: number;
   message: string;
+  emotion?: string;
 };
 
 const emotions = ["neutral", "happy", "angry", "sad", "relaxed"] as const;
@@ -49,6 +50,10 @@ export const textsToScreenplay = (
   const screenplays: Screenplay[] = [];
   for (let i = 0; i < texts.length; i++) {
     const text = texts[i];
+    if (text == null) {
+      console.warn("textsToScreenplay收到null或undefined文本，已跳过");
+      continue;
+    }
     const message = text.replace(/\[(.*?)\]/g, "");
     let expression = emote;
     screenplays.push({
@@ -58,6 +63,7 @@ export const textsToScreenplay = (
         speakerX: koeiroParam.speakerX,
         speakerY: koeiroParam.speakerY,
         message: message,
+        emotion: mapEmotionTypeToTTS(expression as EmotionType)
       },
     });
   }
@@ -75,5 +81,20 @@ const emotionToTalkStyle = (emotion: EmotionType): TalkStyle => {
       return "sad";
     default:
       return "talk";
+  }
+};
+
+const mapEmotionTypeToTTS = (emotion: EmotionType): string => {
+  switch (emotion) {
+    case "happy":
+      return "happy";
+    case "sad":
+      return "sad";
+    case "angry":
+      return "angry";
+    case "relaxed":
+      return "neutral";
+    default:
+      return "neutral";
   }
 };

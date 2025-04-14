@@ -68,11 +68,15 @@ export const fetchAudio = async (talk: Talk, globalConfig: GlobalConfig): Promis
   try {
     console.log(`准备请求流式TTS音频 - 文本: ${talk.message.substring(0, 50)}${talk.message.length > 50 ? '...' : ''}, 声音ID: ${globalConfig.ttsConfig.ttsVoiceId}`);
     
+    // 优先使用talk中的emotion（如果存在），否则回退到globalConfig中的配置
+    const emotion = talk.emotion || globalConfig.ttsConfig.emotion || 'neutral';
+    console.log(`使用情绪: ${emotion}（${talk.emotion ? '来自聊天' : '来自配置'}）`);
+    
     // 使用新的流式TTS API
     const buffer = await generateAudioStream(
       talk.message, 
       globalConfig.ttsConfig.ttsVoiceId, 
-      globalConfig.ttsConfig.emotion || 'neutral'
+      emotion
     );
     
     // 检查返回的音频数据
@@ -107,11 +111,14 @@ export const fetchAudio = async (talk: Talk, globalConfig: GlobalConfig): Promis
 
 // 回退到非流式API的函数
 const fallbackToNonStreamAPI = async (talk: Talk, globalConfig: GlobalConfig): Promise<ArrayBuffer> => {
+  // 优先使用talk中的emotion（如果存在），否则回退到globalConfig中的配置
+  const emotion = talk.emotion || globalConfig.ttsConfig.emotion || 'neutral';
+  
   const requestBody = {
     text: talk.message,
     voice_id: globalConfig.ttsConfig.ttsVoiceId,
     tts_type: globalConfig.ttsConfig.ttsType || 'minimax',
-    emotion: globalConfig.ttsConfig.emotion || 'neutral'
+    emotion: emotion
   };
 
   const headers = {
@@ -120,7 +127,7 @@ const fallbackToNonStreamAPI = async (talk: Talk, globalConfig: GlobalConfig): P
   }
   
   try {
-    console.log(`尝试使用非流式API - 文本: ${talk.message.substring(0, 50)}${talk.message.length > 50 ? '...' : ''}`);
+    console.log(`尝试使用非流式API - 文本: ${talk.message.substring(0, 50)}${talk.message.length > 50 ? '...' : ''}, 情绪: ${emotion}`);
     
     // 直接使用axios
     const response = await axios.post(`${baseUrl}/api/speech/tts/generate/`, requestBody, {

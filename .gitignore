@@ -292,7 +292,6 @@ logs/
 *.sqlite3-journal
 
 # Media and uploads
-media/
 uploads/
 
 # Docker

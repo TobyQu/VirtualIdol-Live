@@ -257,13 +257,25 @@ export default function Home() {
         let aiTextLog = "";
         const sentences = new Array<string>();
         const aiText = content;
+        
+        // 确保aiText不为null
+        if (!aiText) {
+            console.warn("handleUserMessage: 收到空内容，终止处理");
+            return;
+        }
+        
         const aiTalks = textsToScreenplay([aiText], koeiroParam, emote);
         aiTextLog += aiText;
         
         // 检查aiTalks是否为空或无效
-        if (!aiTalks || !aiTalks[0]) {
+        if (!aiTalks || aiTalks.length === 0) {
             console.warn("[handleUserMessage] 无效的aiTalks:", aiTalks);
             return;
+        }
+        
+        // 确保情绪被正确设置
+        if (emote && aiTalks[0]) {
+            aiTalks[0].talk.emotion = emote;
         }
         
         // 文ごとに音声を生成 & 再生、返答を表示
@@ -303,17 +315,28 @@ export default function Home() {
             return
         }
 
-
         let aiTextLog = "";
         const sentences = new Array<string>();
         const aiText = content;
+        
+        // 确保aiText不为null
+        if (!aiText) {
+            console.warn("handleDanmakuMessage: 收到空内容，终止处理");
+            return;
+        }
+        
         const aiTalks = textsToScreenplay([aiText], koeiroParam, emote);
         aiTextLog += aiText;
         
         // 检查aiTalks是否为空或无效
-        if (!aiTalks || !aiTalks[0]) {
+        if (!aiTalks || aiTalks.length === 0) {
             console.warn("[handleDanmakuMessage] 无效的aiTalks:", aiTalks);
             return;
+        }
+        
+        // 确保情绪被正确设置
+        if (emote && aiTalks[0]) {
+            aiTalks[0].talk.emotion = emote;
         }
         
         // 文ごとに音声を生成 & 再生、返答を表示
@@ -418,6 +441,49 @@ export default function Home() {
                     return null;
                 }
             );
+
+            if (response) {
+                console.log("AI回复:", response.text);
+                console.log("情绪状态:", response.emotion);
+                
+                // 获取情绪类型并更新组件状态
+                const emotionType = response.emotion?.type || "neutral";
+                setCurrentEmote(emotionType);
+                
+                // 创建一个包含情绪信息的新aiTalks数组
+                let aiTextLog = "";
+                const sentences = new Array<string>();
+                const aiText = response.text;
+                const aiTalks = textsToScreenplay([aiText], koeiroParam, emotionType);
+                
+                // 为aiTalks添加情绪信息
+                if (aiTalks && aiTalks.length > 0) {
+                    aiTalks[0].talk.emotion = emotionType;
+                }
+                
+                aiTextLog += aiText;
+                
+                // 文ごとに音声を生成 & 再生、返答を表示
+                const currentAssistantMessage = sentences.join(" ");
+                setSubtitle("");  // 先清空字幕，防止文本叠加
+                
+                // 播放声音并显示文本
+                if (aiTalks && aiTalks.length > 0) {
+                    handleSpeakAi(globalConfig, aiTalks[0], () => {
+                        setAssistantMessage(currentAssistantMessage);
+                        // 确保aiTextLog不为undefined
+                        const safeText = aiTextLog ? aiTextLog.toString() : "";
+                        startTypewriterEffect(safeText);
+                        
+                        // アシスタントの返答をログに追加
+                        const messageLogAssistant: Message[] = [
+                            ...messageLog,
+                            {role: "assistant", content: aiTextLog, "user_name": globalConfig?.characterConfig?.character_name || "AI"},
+                        ];
+                        setChatLog(messageLogAssistant);
+                    });
+                }
+            }
 
             console.log("Chat processing state changing to false")
             setChatProcessing(false);

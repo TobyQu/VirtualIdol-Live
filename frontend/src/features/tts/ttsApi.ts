@@ -32,31 +32,10 @@ export async function getVoices() {
 }
 
 /**
- * 获取支持的情绪列表
- * @returns 情绪列表
- */
-export async function getEmotions() {
-    const headers: Record<string, string> = {
-        "Content-Type": "application/json"
-    };
-
-    try {
-        const response = await getRequest("/api/speech/tts/emotions/", headers);
-        if (response.code !== '200') {
-            throw new Error(`获取情绪列表失败: ${response.message || '未知错误'}`);
-        }
-        return response.response || [];
-    } catch (error) {
-        console.error("获取情绪列表出错:", error);
-        throw error;
-    }
-}
-
-/**
  * 生成语音音频
  * @param text 要转换的文本
  * @param voice_id 语音ID
- * @param emotion 情绪 (可选，默认为neutral)
+ * @param emotion 情绪 (可选，从上下文自动设置)
  * @returns 音频URL
  */
 export async function generateAudio(text: string, voice_id: string, emotion: string = 'neutral') {
@@ -87,7 +66,7 @@ export async function generateAudio(text: string, voice_id: string, emotion: str
  * 生成语音音频流（流式TTS）
  * @param text 要转换的文本
  * @param voice_id 语音ID
- * @param emotion 情绪 (可选，默认为neutral)
+ * @param emotion 情绪 (可选，从上下文自动设置)
  * @returns ArrayBuffer音频数据
  */
 export async function generateAudioStream(text: string, voice_id: string, emotion: string = 'neutral'): Promise<ArrayBuffer> {
@@ -106,7 +85,7 @@ export async function generateAudioStream(text: string, voice_id: string, emotio
     };
 
     try {
-        console.log(`请求流式TTS - 文本: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}, 声音ID: ${voice_id}`);
+        console.log(`请求流式TTS - 文本: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}, 声音ID: ${voice_id}, 情绪: ${emotion}`);
         
         // 获取环境变量，确保URL正确
         const environment = process.env.NODE_ENV;

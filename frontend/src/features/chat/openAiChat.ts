@@ -110,7 +110,11 @@ export async function chat(
       throw new Error(chatRes.message || "聊天请求失败");
     }
 
-    return chatRes.response;
+    // 返回完整响应，包括文本内容和情绪状态
+    return {
+      text: chatRes.response,
+      emotion: chatRes.emotion || { type: "neutral", intensity: 0.5 }
+    };
   } catch (error) {
     console.error("聊天请求出错:", error);
     throw error;

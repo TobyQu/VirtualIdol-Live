@@ -23,7 +23,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/
 import { useForm } from "react-hook-form"
 import { custoRoleFormData, customrolEdit, customroleCreate, customroleDelete, customroleList } from "@/features/customRole/customRoleApi"
 import { uploadBackground, queryBackground, backgroundModelData, deleteBackground, uploadVrmModel, queryUserVrmModels, querySystemVrmModels, vrmModelData, deleteVrmModel, generateMediaUrl, buildVrmModelUrl, uploadRolePackage } from "@/features/media/mediaApi"
-import { voiceData, getVoices, getEmotions } from '@/features/tts/ttsApi'
+import { voiceData, getVoices } from '@/features/tts/ttsApi'
 import { saveConfig } from "@/features/config/configApi"
 import { BasicSettings } from "./settings/basic-settings"
 import { CharacterSettings } from "./settings/character-settings"
@@ -35,6 +35,7 @@ import { AssetsSettings } from "./settings/assets-settings"
 import { showSuccess, showError } from "@/lib/toast"
 import { Card, CardContent } from "./ui/card"
 import { EmotionSettings } from "./settings/emotion-settings"
+import { z } from "zod"
 
 const llm_enums = ["openai", "ollama", 'zhipuai'];
 
@@ -69,7 +70,6 @@ export type SettingsFormValues = {
   examples_of_dialogue: string
   custom_role_template_type: string
   ttsVoiceId: string
-  emotion: string
 }
 
 type Props = {
@@ -120,7 +120,6 @@ export function SettingsSheet({
   const [selectedRoleId, setSelectedRoleId] = useState(-1);
   const [backgroundModels, setBackgroundModels] = useState([backgroundModelData]);
   const [voices, setVoices] = useState([voiceData]);
-  const [emotions, setEmotions] = useState<string[]>([]);
   const [systemVrmModels, setSystemVrmModels] = useState<any[]>([]);
   const [userVrmModels, setUserVrmModels] = useState<any[]>([]);
   const [selectedVrmModelId, setSelectedVrmModelId] = useState(-1);
@@ -201,8 +200,6 @@ export function SettingsSheet({
     queryUserVrmModels().then(data => setUserVrmModels(data));
     // 获取语音列表
     getVoices().then(data => setVoices(data));
-    // 获取情绪列表
-    getEmotions().then(data => setEmotions(data));
     
     // 确保一开始就显示右滚动按钮
     setShowRightScroll(true);
@@ -399,7 +396,6 @@ export function SettingsSheet({
           ttsConfig: {
             ...globalConfig.ttsConfig,
             ttsVoiceId: values.ttsVoiceId,
-            emotion: values.emotion,
           },
         };
 
@@ -426,6 +422,39 @@ export function SettingsSheet({
       tabsListRef.current.scrollBy({ left: 120, behavior: 'smooth' });
     }
   };
+
+  const formSchema = z.object({
+    proxyEnabled: z.boolean().optional(),
+    liveEnabled: z.boolean().optional(),
+    httpProxy: z.string().optional(),
+    httpsProxy: z.string().optional(),
+    socks5Proxy: z.string().optional(),
+    roomId: z.string().optional(),
+    cookie: z.string().optional(),
+    conversationType: z.string().optional(),
+    languageModel: z.string().optional(),
+    characterName: z.string().optional(),
+    yourName: z.string().optional(),
+    backgroundUrl: z.string().optional(),
+    vrmModel: z.string().optional(),
+    openaiApiKey: z.string().optional(),
+    openaiBaseUrl: z.string().optional(),
+    zhipuaiApiKey: z.string().optional(),
+    ollamaApiBase: z.string().optional(),
+    ollamaModelName: z.string().optional(),
+    enableLongMemory: z.string().optional(),
+    enableSummary: z.string().optional(),
+    enableReflection: z.string().optional(),
+    languageModelForSummary: z.string().optional(),
+    languageModelForReflection: z.string().optional(),
+    faissDataDir: z.string().optional(),
+    persona: z.string().optional(),
+    personality: z.string().optional(),
+    scenario: z.string().optional(),
+    examples_of_dialogue: z.string().optional(),
+    custom_role_template_type: z.string().optional(),
+    ttsVoiceId: z.string().optional(),
+  })
 
   const form = useForm<SettingsFormValues>({
     defaultValues: {
@@ -458,8 +487,7 @@ export function SettingsSheet({
       scenario: customRole?.scenario || "",
       examples_of_dialogue: customRole?.examples_of_dialogue || "",
       custom_role_template_type: customRole?.custom_role_template_type || "",
-      ttsVoiceId: globalConfig?.ttsConfig?.ttsVoiceId || "-1",
-      emotion: globalConfig?.ttsConfig?.emotion || "neutral"
+      ttsVoiceId: globalConfig?.ttsConfig?.ttsVoiceId || "-1"
     }
   });
 

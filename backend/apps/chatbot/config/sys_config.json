@@ -46,7 +46,7 @@
     "B_COOKIE": ""
   },
   "ttsConfig": {
-    "ttsVoiceId": "female-shaonv",
+    "ttsVoiceId": "female-yujie",
     "emotion": "neutral",
     "ttsType": "minimax"
   }
