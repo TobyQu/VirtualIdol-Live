@@ -340,39 +340,32 @@ class SysConfig:
                 character_name = "爱莉"
                 yourName = "用户"
             else:
-                result = CustomRoleModel.objects.all()
-                if len(result) == 0:
-                    logger.debug("=> load default character")
-                    custom_role = CustomRoleModel(
-                        role_name=aili_zh.role_name,
-                        persona=aili_zh.persona,
-                        personality=aili_zh.personality,
-                        scenario=aili_zh.scenario,
-                        examples_of_dialogue=aili_zh.examples_of_dialogue,
-                        custom_role_template_type=aili_zh.custom_role_template_type,
-                        role_package_id=-1
-                    )
-                    custom_role.save()
-                    logger.info(f"已创建默认角色: ID={custom_role.id}, 名称={custom_role.role_name}")
-                    character = custom_role.id
-                    character_name = custom_role.role_name
-                else:
-                    # 加载角色配置
-                    try:
-                        character = sys_config_json["characterConfig"]["character"]
-                        yourName = sys_config_json["characterConfig"]["yourName"]
-                        character_name = sys_config_json["characterConfig"]["character_name"]
-                        
-                        # 检查指定的角色ID是否存在
-                        role_exists = CustomRoleModel.objects.filter(id=character).exists()
-                        if not role_exists:
-                            logger.warning(f"配置中指定的角色ID {character} 不存在，尝试使用第一个可用角色")
-                            first_role = CustomRoleModel.objects.first()
-                            if first_role:
-                                character = first_role.id
-                                character_name = first_role.role_name
-                            else:
-                                # 如果没有任何角色，创建默认角色
+                # 先尝试获取ID为1的角色（默认角色应该是ID为1）
+                try:
+                    default_role = CustomRoleModel.objects.filter(id=1).first()
+                    if default_role is None:
+                        # 如果没有ID为1的角色，检查是否有其他角色
+                        result = CustomRoleModel.objects.all()
+                        if len(result) == 0:
+                            logger.info("数据库中不存在角色，创建默认角色")
+                            # 创建一个新的默认角色
+                            logger.info("数据库中存在角色但没有ID=1的角色，创建默认角色")
+                            from django.db import IntegrityError
+                            try:
+                                custom_role = CustomRoleModel(
+                                    id=1,  # 明确尝试使用ID=1
+                                    role_name=aili_zh.role_name,
+                                    persona=aili_zh.persona,
+                                    personality=aili_zh.personality,
+                                    scenario=aili_zh.scenario,
+                                    examples_of_dialogue=aili_zh.examples_of_dialogue,
+                                    custom_role_template_type=aili_zh.custom_role_template_type,
+                                    role_package_id=-1
+                                )
+                                custom_role.save()
+                                logger.info(f"已创建ID为1的默认角色: {custom_role.role_name}")
+                            except IntegrityError:
+                                # 如果ID=1已被使用但查询不到，创建一个新的角色
                                 custom_role = CustomRoleModel(
                                     role_name=aili_zh.role_name,
                                     persona=aili_zh.persona,
@@ -383,26 +376,68 @@ class SysConfig:
                                     role_package_id=-1
                                 )
                                 custom_role.save()
-                                logger.info(f"已创建默认角色: ID={custom_role.id}, 名称={custom_role.role_name}")
-                                character = custom_role.id
-                                character_name = custom_role.role_name
-                    except KeyError:
-                        # 如果配置项不存在，使用默认值
-                        logger.error("characterConfig不存在或不完整，使用默认值")
-                        # 尝试获取第一个可用角色
+                                logger.info(f"由于ID=1冲突，已创建自动ID的默认角色: ID={custom_role.id}, 名称={custom_role.role_name}")
+                            character = custom_role.id
+                            character_name = custom_role.role_name
+                        else:
+                            # 有其他角色但没有ID=1的角色，创建一个新的默认角色
+                            logger.info("数据库中存在角色但没有ID=1的角色，创建默认角色")
+                            from django.db import IntegrityError
+                            try:
+                                custom_role = CustomRoleModel(
+                                    id=1,  # 明确尝试使用ID=1
+                                    role_name=aili_zh.role_name,
+                                    persona=aili_zh.persona,
+                                    personality=aili_zh.personality,
+                                    scenario=aili_zh.scenario,
+                                    examples_of_dialogue=aili_zh.examples_of_dialogue,
+                                    custom_role_template_type=aili_zh.custom_role_template_type,
+                                    role_package_id=-1
+                                )
+                                custom_role.save()
+                                logger.info(f"已创建ID为1的默认角色: {custom_role.role_name}")
+                            except IntegrityError:
+                                # 如果ID=1已被使用但查询不到，创建一个新的角色
+                                custom_role = CustomRoleModel(
+                                    role_name=aili_zh.role_name,
+                                    persona=aili_zh.persona,
+                                    personality=aili_zh.personality,
+                                    scenario=aili_zh.scenario,
+                                    examples_of_dialogue=aili_zh.examples_of_dialogue,
+                                    custom_role_template_type=aili_zh.custom_role_template_type,
+                                    role_package_id=-1
+                                )
+                                custom_role.save()
+                                logger.info(f"由于ID=1冲突，已创建自动ID的默认角色: ID={custom_role.id}, 名称={custom_role.role_name}")
+                            character = custom_role.id
+                            character_name = custom_role.role_name
+                    else:
+                        # 找到了ID为1的角色
+                        character = default_role.id
+                        character_name = default_role.role_name
+                        
+                        # 尝试从配置获取用户名
                         try:
-                            first_role = CustomRoleModel.objects.first()
-                            if first_role:
-                                character = first_role.id
-                                character_name = first_role.role_name
-                            else:
-                                character = 1
-                                character_name = "爱莉"
-                        except Exception:
-                            character = 1
-                            character_name = "爱莉"
-                            
-                        yourName = "用户"
+                            yourName = sys_config_json["characterConfig"]["yourName"]
+                        except (KeyError, TypeError):
+                            yourName = "用户"
+                except Exception as e:
+                    logger.error(f"获取默认角色时出错: {str(e)}")
+                    # 创建一个新的默认角色
+                    custom_role = CustomRoleModel(
+                        role_name=aili_zh.role_name,
+                        persona=aili_zh.persona,
+                        personality=aili_zh.personality,
+                        scenario=aili_zh.scenario,
+                        examples_of_dialogue=aili_zh.examples_of_dialogue,
+                        custom_role_template_type=aili_zh.custom_role_template_type,
+                        role_package_id=-1
+                    )
+                    custom_role.save()
+                    logger.info(f"出错后创建默认角色: ID={custom_role.id}, 名称={custom_role.role_name}")
+                    character = custom_role.id
+                    character_name = custom_role.role_name
+                    yourName = "用户"
         except (OperationalError, ProgrammingError) as db_err:
             logger.warning(f"数据库表访问错误，使用默认配置: {str(db_err)}")
             character = 1

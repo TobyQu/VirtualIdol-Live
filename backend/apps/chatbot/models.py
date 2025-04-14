@@ -24,7 +24,7 @@ class CustomRoleModel(models.Model):
     custom_role_template_type： 模版类型
     role_package_id：角色安装包id
     '''
-    id = models.AutoField
+    id = models.AutoField(primary_key=True)
     role_name = models.CharField(max_length=100)
     persona = models.TextField()
     personality = models.TextField()
