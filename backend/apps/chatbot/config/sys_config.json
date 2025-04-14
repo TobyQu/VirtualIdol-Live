@@ -1,4 +1,5 @@
 {
+  "version": "1.0.0",
   "characterConfig": {
     "character": 1,
     "character_name": "爱莉",
@@ -9,7 +10,7 @@
   "languageModelConfig": {
     "openai": {
       "OPENAI_API_KEY": "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",
-      "OPENAI_BASE_URL": "https://api.openai.com/v1"
+      "OPENAI_BASE_URL": "https://service-etuut1fg-1255572206.usw.tencentapigw.com/v1"
     },
     "ollama": {
       "OLLAMA_API_BASE": "http://localhost:11434",
@@ -28,25 +29,15 @@
     "languageModel": "openai"
   },
   "memoryStorageConfig": {
-    "zep_memory": {
-      "zep_url": "http://localhost:8881",
-      "zep_optional_api_key": "optional_api_key"
-    },
-    "milvusMemory": {
-      "host": "127.0.0.1",
-      "port": "19530",
-      "user": "user",
-      "password": "Milvus",
-      "dbName": "default"
+    "faissMemory": {
+      "dataDir": "storage/memory"
     },
     "enableLongMemory": true,
     "enableSummary": false,
     "languageModelForSummary": "openai",
     "enableReflection": false,
     "languageModelForReflection": "openai",
-    "faissMemory": {
-      "dataDir": "storage/memory"
-    }
+    "local_memory_num": 5
   },
   "background_url": "/assets/backgrounds/default.png",
   "enableLive": false,

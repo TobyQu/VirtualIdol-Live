@@ -67,12 +67,6 @@ class ConversationConfig(BaseModel):
     languageModel: str = Field(default="openai", description="使用的语言模型类型")
 
 
-class ZepMemoryConfig(BaseModel):
-    """Zep记忆配置"""
-    zep_url: str = Field(default="http://localhost:8881", description="Zep服务地址")
-    zep_optional_api_key: str = Field(default="optional_api_key", description="Zep API密钥(可选)")
-
-
 class FaissMemoryConfig(BaseModel):
     """FAISS记忆配置"""
     dataDir: str = Field(default="storage/memory", description="FAISS数据存储目录")
@@ -80,13 +74,13 @@ class FaissMemoryConfig(BaseModel):
 
 class MemoryStorageConfig(BaseModel):
     """记忆存储配置"""
-    zep_memory: ZepMemoryConfig = Field(default_factory=ZepMemoryConfig)
     faissMemory: FaissMemoryConfig = Field(default_factory=FaissMemoryConfig)
     enableLongMemory: bool = Field(default=False, description="是否启用长期记忆")
     enableSummary: bool = Field(default=False, description="是否启用摘要功能")
     languageModelForSummary: str = Field(default="openai", description="用于生成摘要的语言模型")
     enableReflection: bool = Field(default=False, description="是否启用反思功能")
     languageModelForReflection: str = Field(default="openai", description="用于反思的语言模型")
+    local_memory_num: int = Field(default=5, description="本地记忆显示数量")
 
 
 class LiveStreamingConfig(BaseModel):

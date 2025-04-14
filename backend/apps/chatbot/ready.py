@@ -68,6 +68,43 @@ def startup():
         sys.modules['apps.chatbot.config'].singleton_sys_config = config_instance
         logger.info("SysConfig初始化成功")
         
+        # 1.1. 确保长期记忆模块初始化
+        logger.info("1.1. 检查并确保长期记忆模块初始化...")
+        try:
+            if config_instance.enable_longMemory:
+                logger.info("长期记忆功能已启用，检查长期记忆模块是否正确初始化")
+                
+                # 检查长期记忆是否已经初始化
+                memory_initialized = (hasattr(config_instance, 'memory_storage_driver') and 
+                                     config_instance.memory_storage_driver is not None)
+                                     
+                long_memory_initialized = False
+                if memory_initialized:
+                    long_memory_initialized = (hasattr(config_instance.memory_storage_driver, 'long_memory_storage') and 
+                                              config_instance.memory_storage_driver.long_memory_storage is not None)
+                
+                if not memory_initialized or not long_memory_initialized:
+                    logger.warning("长期记忆功能已启用但未正确初始化，尝试重新初始化")
+                    config_instance._init_memory_storage()
+                    
+                    # 再次检查初始化结果
+                    memory_initialized = (hasattr(config_instance, 'memory_storage_driver') and 
+                                         config_instance.memory_storage_driver is not None)
+                    long_memory_initialized = False
+                    if memory_initialized:
+                        long_memory_initialized = (hasattr(config_instance.memory_storage_driver, 'long_memory_storage') and 
+                                                  config_instance.memory_storage_driver.long_memory_storage is not None)
+                    
+                    logger.info(f"长期记忆模块初始化结果: 记忆驱动={memory_initialized}, 长期记忆={long_memory_initialized}")
+                else:
+                    logger.info("长期记忆模块已正确初始化")
+            else:
+                logger.info("长期记忆功能未启用，跳过初始化检查")
+        except Exception as e:
+            logger.error(f"检查长期记忆模块状态时出错: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+        
         # 2. 初始化ProcessCore
         logger.info("2. 初始化ProcessCore...")
         from .process import _process_core_instance, get_process_core
@@ -88,7 +125,14 @@ def startup():
         RealtimeMessageQueryJobTask.start()
         logger.info("RealtimeMessageQueryJobTask启动成功")
         
+        # 5. 启动聊天历史记忆队列
+        logger.info("5. 启动ChatHistoryMessageQueryJobTask...")
+        from .chat.chat_history_queue import ChatHistoryMessageQueryJobTask
+        ChatHistoryMessageQueryJobTask.start()
+        logger.info("ChatHistoryMessageQueryJobTask启动成功")
+        
         logger.info("所有服务启动完成")
     except Exception as e:
         logger.error(f"启动服务失败: {str(e)}")
-        raise 
+        import traceback
+        logger.error(traceback.format_exc()) 

@@ -28,15 +28,15 @@ def initialize_live_service():
     from ..insight.bilibili_api.bili_live_client import lazy_bilibili_live
     
     # 获取SysConfig实例
-    singleton_sys_config = get_sys_config()
+    config = get_sys_config()
     
     # 加载直播配置
-    sys_config_json = singleton_sys_config.get()
+    sys_config_json = config.get()
     try:
         enableLive = sys_config_json.get("enableLive", False)
         if enableLive:
             logger.info("正在初始化直播服务...")
-            lazy_bilibili_live(sys_config_json, singleton_sys_config)
+            lazy_bilibili_live(sys_config_json, config)
             logger.info("直播服务初始化完成")
     except Exception as e:
         logger.error(f"加载直播配置出错: {str(e)}")
@@ -44,6 +44,6 @@ def initialize_live_service():
         if "enableLive" not in sys_config_json:
             sys_config_json["enableLive"] = False
             # 保存回配置
-            singleton_sys_config.save(sys_config_json)
+            config.save(sys_config_json)
     
     logger.info("=> Load SysConfig Success")

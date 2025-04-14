@@ -42,6 +42,12 @@ export const API_ENDPOINTS = {
     GET_CONFIG: '/chatbot/config/get',
     UPDATE_CONFIG: '/chatbot/config/save',
   },
+  // 记忆相关
+  MEMORY: {
+    CHECK_STATUS: '/chatbot/memory/status/',
+    REINITIALIZE: '/chatbot/memory/reinitialize/',
+    CLEAR: '/chatbot/memory/clear/',
+  },
   // 角色相关
   ROLE: {
     LIST: '/chatbot/roles',

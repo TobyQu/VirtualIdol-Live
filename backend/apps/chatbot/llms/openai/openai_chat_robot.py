@@ -7,7 +7,7 @@ from litellm import completion
 
 from ...utils.chat_message_utils import format_chat_text
 from ...utils.str_utils import remove_spaces_and_tabs
-from ...memory.zep.zep_memory import ChatHistroy
+from ...memory.chat_history import ChatHistroy
 from ..base import BaseLlmGeneration, LlmResponse
 
 logger = logging.getLogger(__name__)
@@ -36,6 +36,8 @@ class OpenAIGeneration(BaseLlmGeneration):
                 "model": self.model_name,
                 "messages": messages,
                 "temperature": self.temperature,
+                # 不设置max_tokens，避免truncate错误
+                # "max_tokens": self.max_tokens,
             }
             
             if self.openai_base_url:
@@ -81,15 +83,23 @@ class OpenAIGeneration(BaseLlmGeneration):
                 messages.append(message)
             messages.append({'role': 'user', 'content': you_name + "说" + query})
 
+            # 准备参数，移除可能导致truncate错误的参数
             completion_params = {
                 "model": self.model_name,
                 "messages": messages,
                 "stream": True,
                 "temperature": self.temperature,
+                # 不设置max_tokens，避免truncate错误
+                # "max_tokens": self.max_tokens,
             }
             
             if self.openai_base_url:
                 completion_params["api_base"] = self.openai_base_url
+
+            # 添加设置，禁用truncate检查
+            # 避免LiteLLM中的truncate错误
+            import litellm
+            litellm.set_max_tokens = False
 
             response = completion(**completion_params)
 
@@ -97,17 +107,16 @@ class OpenAIGeneration(BaseLlmGeneration):
             for event in response:
                 if not isinstance(event, dict):
                     event = event.model_dump()
-                if isinstance(event['choices'], List) and len(event['choices']) > 0:
-                    event_text = event["choices"][0]['delta']['content']
+                if isinstance(event.get('choices', []), List) and len(event['choices']) > 0:
+                    delta = event["choices"][0].get('delta', {})
+                    event_text = delta.get('content', '')
                     if isinstance(event_text, str) and event_text != "":
-                        content = event_text
-                        content = remove_spaces_and_tabs(content)
+                        content = remove_spaces_and_tabs(event_text)
                         if content == "":
                             continue
                         answer += content
                         if realtime_callback:
-                            realtime_callback(role_name, you_name,
-                                            content, False)
+                            realtime_callback(role_name, you_name, content, False)
 
             answer = format_chat_text(role_name, you_name, answer)
             if conversation_end_callback:
@@ -115,7 +124,7 @@ class OpenAIGeneration(BaseLlmGeneration):
                 conversation_end_callback(role_name, answer, you_name, query)
                 
         except Exception as e:
-            logger.error(f"Stream chat error: {str(e)}")
+            logger.error(f"OpenAI Stream chat error: {str(e)}")
             if realtime_callback:
                 realtime_callback(role_name, you_name, "抱歉，发生了错误，请稍后重试。", True)
             if conversation_end_callback:

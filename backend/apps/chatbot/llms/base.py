@@ -33,6 +33,7 @@ class BaseLlmGeneration(ABC):
         self._rate_limit_semaphore = asyncio.Semaphore(10)  # 限制并发请求数
         self._last_request_time = datetime.min
         self._min_request_interval = 0.1  # 最小请求间隔（秒）
+        self.max_tokens = 2048  # 默认最大token数
         
     async def _rate_limit(self):
         """实现请求限流"""

@@ -61,8 +61,6 @@ class SysConfig:
     your_name: str
     room_id: str
     search_memory_size: int = 3
-    zep_url: str
-    zep_optional_api_key: str
     importance_rating: ImportanceRating
     portrait_analysis: PortraitAnalysis
     local_memory_num: int = 5
@@ -153,10 +151,6 @@ class SysConfig:
                 "languageModel": "openai"
             },
             "memoryStorageConfig": {
-                "zep_memory": {
-                    "zep_url": "http://localhost:8881",
-                    "zep_optional_api_key": "optional_api_key"
-                },
                 "faissMemory": {
                     "dataDir": "storage/memory"
                 },

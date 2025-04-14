@@ -10,7 +10,7 @@ from .base import BaseLlmGeneration, LlmResponse, LlmMetrics
 from .ollama.ollama_chat_robot import OllamaGeneration
 from .openai.openai_chat_robot import OpenAIGeneration
 from .zhipuai.zhipuai_chat_robot import ZhipuAIGeneration
-from ..memory.zep.zep_memory import ChatHistroy
+from ..memory.chat_history import ChatHistroy
 
 logger = logging.getLogger(__name__)
 
@@ -158,11 +158,55 @@ class LlmModelDriver:
                    conversation_end_callback=None):
         start_time = datetime.now()
         try:
+            # 先全局修补litellm库以避免truncate错误
+            try:
+                import litellm
+                if self.patch_litellm():
+                    # 设置模型上下文长度
+                    litellm.model_cost = {}
+                    litellm.model_info = {}
+                    litellm.max_tokens = {}
+                    
+                    # 设置所有已知模型的上下文长度
+                    max_model_context_lengths = {
+                        "gpt-3.5-turbo": 4096,
+                        "gpt-4": 8192,
+                        "gpt-4-32k": 32768,
+                        "glm-4": 8192,
+                        "glm-3-turbo": 4096,
+                        "claude-instant-1": 100000,
+                        "claude-2": 100000,
+                        "claude-3-opus-20240229": 200000,
+                        "claude-3-sonnet-20240229": 180000,
+                        "gemini-pro": 30720,
+                        "ollama/qwen:7b": 8192,
+                        "ollama/qwen:14b": 8192,
+                        "ollama/llama2": 4096,
+                        "ollama/mistral": 8192,
+                        "ollama/openhermes": 8192,
+                        "default": 8192,  # 通用默认值
+                    }
+                    
+                    # 为所有模型设置上下文长度
+                    for model, ctx_length in max_model_context_lengths.items():
+                        litellm.model_info[model] = litellm.model_info.get(model, {})
+                        litellm.model_info[model]["max_input_tokens"] = ctx_length
+                        litellm.max_tokens[model] = ctx_length
+                    
+                    logger.info("成功修补litellm库以避免truncate错误")
+            except ImportError:
+                logger.warning("无法导入litellm库")
+            except Exception as patch_e:
+                logger.warning(f"修补litellm库失败: {str(patch_e)}")
+
+            # 继续正常的聊天流程
             load_balancer = self.load_balancers.get(type)
             if not load_balancer:
                 raise ValueError(f"Unknown model type: {type}")
                 
             instance = load_balancer.get_instance()
+            
+            # 继续正常调用
             asyncio.run(instance.chatStream(
                 prompt=prompt,
                 role_name=role_name,
@@ -205,3 +249,27 @@ class LlmModelDriver:
     def get_all_metrics(self) -> Dict[str, LlmMetrics]:
         """获取所有模型的统计信息"""
         return self.monitor.get_all_metrics()
+
+    def patch_litellm(self):
+        """
+        修补litellm库，防止truncate错误
+        """
+        try:
+            import litellm
+            
+            def no_truncate(self, *args, **kwargs):
+                """防止truncate的补丁函数"""
+                return kwargs.get('messages', [])[-1]['content']
+            
+            # 尝试不同的方式来修补litellm
+            if hasattr(litellm, 'model_info'):
+                litellm.model_info.get_model_info = no_truncate
+            elif hasattr(litellm, 'utils'):
+                if hasattr(litellm.utils, 'get_model_info'):
+                    litellm.utils.get_model_info = no_truncate
+            
+            logger.info("成功修补litellm库，禁用truncate功能")
+            return True
+        except Exception as e:
+            logger.warning(f"修补litellm库失败: {str(e)}")
+            return False

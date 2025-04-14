@@ -32,6 +32,24 @@ class SysConfig(SysConfigInterface):
         self.llm_model_driver = LlmModelDriver()
         self.memory_storage_driver = None
         
+        # 记忆搜索配置
+        self.search_memory_size = 3  # 默认搜索返回的记忆条数
+        
+        # 应用litellm补丁，防止truncate错误
+        try:
+            import litellm
+            import litellm.utils
+            # 禁用所有truncate相关功能
+            litellm.set_max_tokens = False
+            
+            # 覆盖litellm的truncation检查
+            def no_truncate(*args, **kwargs):
+                return args[0]  # 直接返回原始消息，不做任何截断
+            litellm.utils.truncate_messages = no_truncate
+            logger.info("成功应用litellm补丁，禁用truncate功能")
+        except Exception as e:
+            logger.warning(f"应用litellm补丁失败: {str(e)}")
+        
         # 获取配置管理器
         self.config_manager = get_config_manager()
         
@@ -124,6 +142,9 @@ class SysConfig(SysConfigInterface):
         self.enable_longMemory = memory_config.enableLongMemory
         self.enable_reflection = memory_config.enableReflection
         
+        # 设置本地记忆数量
+        self.local_memory_num = memory_config.local_memory_num
+        
         if self.enable_summary:
             self.summary_llm_model_driver_type = memory_config.languageModelForSummary
         else:
@@ -133,10 +154,6 @@ class SysConfig(SysConfigInterface):
             self.reflection_llm_model_driver_type = memory_config.languageModelForReflection
         else:
             self.reflection_llm_model_driver_type = "openai"
-        
-        # ZEP配置
-        self.zep_url = memory_config.zep_memory.zep_url
-        self.zep_optional_api_key = memory_config.zep_memory.zep_optional_api_key
     
     def _reload_config_to_instance(self) -> None:
         """重新加载配置到当前实例"""
@@ -213,19 +230,65 @@ class SysConfig(SysConfigInterface):
             config = self.config_manager.get_config()
             
             # 创建记忆存储配置
+            data_dir = config.memoryStorageConfig.faissMemory.dataDir
+            # 确保数据目录存在
+            os.makedirs(data_dir, exist_ok=True)
+            logger.info(f"使用数据目录: {data_dir}")
+            
             memory_storage_config = {
-                "data_dir": config.memoryStorageConfig.faissMemory.dataDir,
+                "data_dir": data_dir,
             }
             
             # 使用工厂方法获取MemoryStorageDriver类并创建实例
+            logger.info("开始获取MemoryStorageDriver类")
             MemoryStorageDriver = get_memory_storage_driver()
-            self.memory_storage_driver = MemoryStorageDriver(
-                memory_storage_config=memory_storage_config, 
-                sys_config=self
-            )
-            logger.info("记忆模块初始化成功")
+            logger.info("开始创建MemoryStorageDriver实例")
+            
+            try:
+                self.memory_storage_driver = MemoryStorageDriver(
+                    memory_storage_config=memory_storage_config, 
+                    sys_config=self
+                )
+                
+                # 验证初始化结果
+                if hasattr(self.memory_storage_driver, 'long_memory_storage') and self.memory_storage_driver.long_memory_storage is not None:
+                    # 检查索引文件是否正确初始化
+                    faiss_storage = self.memory_storage_driver.long_memory_storage
+                    
+                    if hasattr(faiss_storage, 'index') and faiss_storage.index is not None:
+                        logger.info(f"FAISS索引初始化成功，包含 {faiss_storage.index.ntotal} 条记录")
+                        logger.info("长期记忆存储初始化成功")
+                    else:
+                        logger.error("FAISS索引对象初始化失败")
+                        raise RuntimeError("FAISS索引对象初始化失败")
+                else:
+                    logger.warning("记忆驱动初始化成功，但长期记忆未能正确初始化")
+                    if self.enable_longMemory:
+                        logger.error("长期记忆功能已启用但初始化失败，这可能导致后续问题")
+                
+                logger.info("记忆模块初始化成功")
+            except Exception as inner_e:
+                logger.error(f"MemoryStorageDriver实例化失败: {str(inner_e)}")
+                import traceback
+                logger.error(traceback.format_exc())
+                
+                # 如果启用了长期记忆，记录更详细的错误信息
+                if self.enable_longMemory:
+                    logger.error(f"长期记忆功能已启用但初始化失败，这将导致聊天功能问题")
+                
+                # 重置驱动实例
+                self.memory_storage_driver = None
+                raise inner_e
+                
+        except ImportError as ie:
+            logger.error(f"导入记忆模块失败: {str(ie)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            self.memory_storage_driver = None
         except Exception as e:
             logger.error(f"初始化记忆模块失败: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             self.memory_storage_driver = None
     
     # 为了兼容性保留但不实际使用的方法

@@ -28,6 +28,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Head from "next/head";
 import { EmotionIndicator } from '@/components/EmotionIndicator';
 import { EmotionControlPanel } from '@/components/EmotionControlPanel';
+import Link from "next/link";
 
 // 为Window对象添加isClosingAllowed属性
 declare global {
@@ -153,6 +154,7 @@ export default function Home() {
     const [currentEmote, setCurrentEmote] = useState<string>("neutral");
     const [backgroundImageUrl, setBackgroundImageUrl] = useState<string>("/assets/backgrounds/bg-c.png");
     const [isClient, setIsClient] = useState(false);
+    const [showDebugMenu, setShowDebugMenu] = useState(false);
     const [loadingStages, setLoadingStages] = useState<Array<{id: string; label: string; completed: boolean}>>([
         { id: 'background', label: '加载背景', completed: false },
         { id: 'vrm', label: '加载模型', completed: false },
@@ -474,39 +476,43 @@ export default function Home() {
     }
 
     return (
-        <WindowManagerProvider
-            onChatProcessStart={handleSendChat}
-            chatLog={chatLog}
-            setChatLog={setChatLog}
-            globalConfig={globalConfig}
-            setGlobalConfig={setGlobalConfig}
-        >
-            <AppContent 
-                isClient={isClient}
-                isLoading={isLoading}
-                loadingStages={loadingStages}
-                handleLoadingStateChange={handleLoadingStateChange}
-                globalConfig={globalConfig}
-                backgroundImageUrl={backgroundImageUrl}
-                subtitle={subtitle}
-                currentEmote={currentEmote}
-                typingDelay={typingDelay}
-                openAiKey={openAiKey}
-                setOpenAiKey={setOpenAiKey}
-                systemPrompt={systemPrompt}
-                setSystemPrompt={setSystemPrompt}
+        <div className="h-screen flex flex-col items-center justify-center">
+            
+
+            <WindowManagerProvider
+                onChatProcessStart={handleSendChat}
                 chatLog={chatLog}
-                koeiroParam={koeiroParam}
-                assistantMessage={assistantMessage}
-                handleChangeChatLog={handleChangeChatLog}
-                setKoeiroParam={setKoeiroParam}
-                onChangeGlobalConfig={onChangeGlobalConfig}
-                chatProcessing={chatProcessing}
-                handleSendChat={handleSendChat}
-                setBackgroundImageUrl={(url) => setBackgroundImageUrl(generateMediaUrl(url))}
                 setChatLog={setChatLog}
-            />
-        </WindowManagerProvider>
+                globalConfig={globalConfig}
+                setGlobalConfig={setGlobalConfig}
+            >
+                <AppContent 
+                    isClient={isClient}
+                    isLoading={isLoading}
+                    loadingStages={loadingStages}
+                    handleLoadingStateChange={handleLoadingStateChange}
+                    globalConfig={globalConfig}
+                    backgroundImageUrl={backgroundImageUrl}
+                    subtitle={subtitle}
+                    currentEmote={currentEmote}
+                    typingDelay={typingDelay}
+                    openAiKey={openAiKey}
+                    setOpenAiKey={setOpenAiKey}
+                    systemPrompt={systemPrompt}
+                    setSystemPrompt={setSystemPrompt}
+                    chatLog={chatLog}
+                    koeiroParam={koeiroParam}
+                    assistantMessage={assistantMessage}
+                    handleChangeChatLog={handleChangeChatLog}
+                    setKoeiroParam={setKoeiroParam}
+                    onChangeGlobalConfig={onChangeGlobalConfig}
+                    chatProcessing={chatProcessing}
+                    handleSendChat={handleSendChat}
+                    setBackgroundImageUrl={(url: string) => setBackgroundImageUrl(generateMediaUrl(url))}
+                    setChatLog={setChatLog}
+                />
+            </WindowManagerProvider>
+        </div>
     );
 }
 
