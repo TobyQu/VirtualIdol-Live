@@ -237,7 +237,7 @@ const SubtitleBubbleBase: React.FC<SubtitleBubbleProps> = ({
 
   // 根据位置确定样式类
   const positionClass = position === "top" 
-    ? "top-28" 
+    ? "top-1/3" 
     : "bottom-48";
 
   return (

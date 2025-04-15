@@ -1,6 +1,7 @@
 import { buildUrl } from "@/utils/buildUrl";
 import { getRequest, postRequest, buildMediaUrl } from "../httpclient/httpclient";
 import axios from 'axios';
+import { EmotionType } from "../messages/messages";
 
 export const voiceData = {
     id: "",
@@ -163,4 +164,12 @@ export async function generateAudioStream(text: string, voice_id: string, emotio
         console.error("生成流式语音出错:", error);
         throw error;
     }
+}
+
+/**
+ * 获取可用的情绪类型
+ * @returns 情绪类型列表
+ */
+export function getEmotions() {
+    return Object.values(EmotionType);
 }

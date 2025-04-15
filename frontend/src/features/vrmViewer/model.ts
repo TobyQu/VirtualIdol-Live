@@ -5,9 +5,11 @@ import { VRMAnimation } from "../../lib/VRMAnimation/VRMAnimation";
 import { VRMLookAtSmootherLoaderPlugin } from "@/lib/VRMLookAtSmootherLoaderPlugin/VRMLookAtSmootherLoaderPlugin";
 import { LipSync } from "../lipSync/lipSync";
 import { EmoteController } from "../emoteController/emoteController";
-import { Screenplay, EmotionType } from "../messages/messages";
+import { Screenplay, VRMEmotionType } from "../messages/messages";
 import { loadMixamoAnimation } from "../mixamo/loadMixamoAnimation";
 import { buildUrl } from "@/utils/buildUrl";
+import { loadVRMAnimation } from "../loadVRMAnimation";
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 
 /**
  * 3Dキャラクターを管理するクラス
@@ -137,12 +139,12 @@ export class Model {
     await new Promise((resolve) => {
       this._lipSync?.playFromArrayBuffer(buffer, () => {
         resolve(true);
-        this.emoteController?.playEmotion("neutral" as EmotionType);
+        this.emoteController?.playEmotion("neutral" as VRMEmotionType);
       });
     });
   }
 
-  public async emote(emotionType: EmotionType) {
+  public async emote(emotionType: VRMEmotionType) {
     this.emoteController?.playEmotion(emotionType);
   }
 

@@ -3,7 +3,7 @@ import { Message } from "@/features/messages/messages";
 import { KoeiroParam } from "@/features/constants/koeiroParam";
 import { ChatLog } from "./chatLog";
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { Settings } from "./settings";
+import { SettingsSheet } from "./settings-sheet";
 import { ViewerContext } from "@/features/vrmViewer/viewerContext";
 import { AssistantText } from "./assistantText";
 import { GlobalConfig } from "@/features/config/configApi";
@@ -114,12 +114,13 @@ export const Menu = ({
       </div>
       {showChatLog && <ChatLog messages={chatLog} globalConfig={globalConfig} />}
       {showSettings && (
-        <Settings
+        <SettingsSheet
           globalConfig={globalConfig}
           openAiKey={openAiKey}
           chatLog={chatLog}
           systemPrompt={systemPrompt}
           koeiroParam={koeiroParam}
+          assistantMessage={assistantMessage}
           remoteLoadVrmFile={remoteLoadVrmFile}
           onClickClose={() => setShowSettings(false)}
           onChangeAiKey={handleAiKeyChange}
@@ -127,9 +128,10 @@ export const Menu = ({
           onChangeSystemPrompt={handleChangeSystemPrompt}
           onChangeChatLog={onChangeChatLog}
           onChangeKoeiroParam={handleChangeKoeiroParam}
+          onChangeGlobalConfig={() => {}}
           onClickOpenVrmFile={handleClickOpenVrmFile}
-          onClickResetChatLog={handleClickResetChatLog}
-          onClickResetSystemPrompt={handleClickResetSystemPrompt}
+          handleClickResetChatLog={handleClickResetChatLog}
+          handleClickResetSystemPrompt={handleClickResetSystemPrompt}
         />
       )}
        {/* {!showChatLog && assistantMessage && (

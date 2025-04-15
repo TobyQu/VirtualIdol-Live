@@ -22,9 +22,6 @@ urlpatterns = [
     path('config/vrm/user/show/', views.show_user_vrm_models, name='show_user_vrm_models'),
     path('config/vrm/system/show/', views.show_system_vrm_models, name='show_system_vrm_models'),
     path('rolepackage/upload/', views.upload_role_package, name='upload_role_package'),
-    # 情绪状态相关API
-    path('emotion/state/', views.get_emotion_state, name='get_emotion_state'),
-    path('emotion/preference/', views.update_emotion_preference, name='update_emotion_preference'),
     # 长期记忆相关API
     path('memory/status/', views.check_memory_status, name='check_memory_status'),
     path('memory/reinitialize/', views.reinitialize_memory_service, name='reinitialize_memory_service'),

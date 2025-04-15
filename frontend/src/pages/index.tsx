@@ -26,11 +26,12 @@ import { SubtitleBubble } from "@/components/subtitle-bubble";
 import { WindowManagerProvider, useWindowManager } from "@/features/windowManager/windowContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Head from "next/head";
-import { EmotionIndicator } from '@/components/EmotionIndicator';
-import { EmotionControlPanel } from '@/components/EmotionControlPanel';
-import Link from "next/link";
 import { AnimationSettings } from "@/components/settings/animation-settings";
 import { Card, CardContent } from "@/components/ui/card";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { GlobalChat } from '@/features/websocket/websocket';
+import { useRouter } from "next/router";
+import axios from "axios";
 
 // 为Window对象添加isClosingAllowed属性
 declare global {
@@ -389,7 +390,7 @@ export default function Home() {
 
         console.log("BehaviorActionMessage:" + content + " emote:" + emote)
 
-        viewer.model?.emote(emote as EmotionType)
+        viewer.model?.emote(emote as VRMEmotionType)
         viewer.model?.loadFBX(buildUrl(content))
     }
 
@@ -717,16 +718,11 @@ function AppContent({
                                     key={subtitle} // 添加key属性，确保文本变化时组件重新挂载
                                     text={subtitle || ""}  // 确保传递空字符串而非undefined
                                     emote={currentEmote}
-                                    position="bottom"
+                                    position="top"
                                     typingDelay={typingDelay}
                                     maxChunkLength={80}
                                     autoHideDelay={5000}
                                 />
-                                {globalConfig?.emotionConfig?.enabled && (
-                                    <div className="absolute top-4 right-4 z-10">
-                                        <EmotionIndicator showIntensity={true} />
-                                    </div>
-                                )}
                             </div>
                         </ResizablePanel>
                         

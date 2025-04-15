@@ -10,14 +10,12 @@ from ..insight.insight import PortraitObservation
 from ..models import RolePackageModel
 from ..output.realtime_message_queue import realtime_callback
 from ..chat.chat_history_queue import conversation_end_callback
-from ..emotion.emotion_manage import EmotionRecognition, EmotionRespond, GenerationEmotionRespondChatPropmt
 from ..utils.datatime_utils import get_current_time_str
 
 logger = logging.getLogger(__name__)
 
 
 class ProcessCore():
-    generation_emotion_respond_chat_propmt: GenerationEmotionRespondChatPropmt
     portrait_observation: PortraitObservation
 
     def __init__(self) -> None:
@@ -26,7 +24,6 @@ class ProcessCore():
         
         # 加载自定义角色生成模块
         self.singleton_character_generation = singleton_character_generation
-        self.generation_emotion_respond_chat_propmt = GenerationEmotionRespondChatPropmt()
 
         # 加载用户画像识别模块
         self.portrait_observation = PortraitObservation(llm_model_driver=self.sys_config.llm_model_driver,

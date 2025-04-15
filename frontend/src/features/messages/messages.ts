@@ -26,14 +26,39 @@ export type Talk = {
   emotion?: string;
 };
 
+// 定义完整的情绪类型列表，包含emotionApi中的类型
+export enum EmotionType {
+  HAPPY = "happy",
+  SAD = "sad",
+  ANGRY = "angry",
+  FEARFUL = "fearful", 
+  DISGUSTED = "disgusted",
+  SURPRISED = "surprised",
+  NEUTRAL = "neutral",
+  RELAXED = "relaxed"
+}
+
+// 情绪类型的中文标签映射
+export const EmotionLabel: Record<string, string> = {
+  [EmotionType.HAPPY]: "高兴",
+  [EmotionType.SAD]: "悲伤",
+  [EmotionType.ANGRY]: "愤怒",
+  [EmotionType.FEARFUL]: "害怕",
+  [EmotionType.DISGUSTED]: "厌恶",
+  [EmotionType.SURPRISED]: "惊讶",
+  [EmotionType.NEUTRAL]: "中性",
+  [EmotionType.RELAXED]: "放松"
+};
+
+// 定义情绪类型集合，用于模型表情
 const emotions = ["neutral", "happy", "angry", "sad", "relaxed"] as const;
-export type EmotionType = (typeof emotions)[number] & VRMExpressionPresetName;
+export type VRMEmotionType = (typeof emotions)[number] & VRMExpressionPresetName;
 
 /**
  * 発話文と音声の感情と、モデルの感情表現がセットになった物
  */
 export type Screenplay = {
-  expression: EmotionType;
+  expression: VRMEmotionType;
   talk: Talk;
 };
 
@@ -67,13 +92,13 @@ export const textsToScreenplay = (
     const message = text.replace(/\[(.*?)\]/g, "");
     let expression = validEmote;
     screenplays.push({
-      expression: expression as EmotionType,
+      expression: expression as VRMEmotionType,
       talk: {
-        style: emotionToTalkStyle(expression as EmotionType),
+        style: emotionToTalkStyle(expression as VRMEmotionType),
         speakerX: koeiroParam.speakerX,
         speakerY: koeiroParam.speakerY,
         message: message,
-        emotion: mapEmotionTypeToTTS(expression as EmotionType)
+        emotion: mapEmotionTypeToTTS(expression as VRMEmotionType)
       },
     });
   }
@@ -81,7 +106,7 @@ export const textsToScreenplay = (
   return screenplays;
 };
 
-const emotionToTalkStyle = (emotion: EmotionType): TalkStyle => {
+const emotionToTalkStyle = (emotion: VRMEmotionType): TalkStyle => {
   switch (emotion) {
     case "angry":
       return "angry";
@@ -94,7 +119,7 @@ const emotionToTalkStyle = (emotion: EmotionType): TalkStyle => {
   }
 };
 
-const mapEmotionTypeToTTS = (emotion: EmotionType): string => {
+const mapEmotionTypeToTTS = (emotion: VRMEmotionType): string => {
   switch (emotion) {
     case "happy":
       return "happy";
@@ -108,3 +133,25 @@ const mapEmotionTypeToTTS = (emotion: EmotionType): string => {
       return "neutral";
   }
 };
+
+// 为兼容旧的情绪API，提供getEmotionState函数实现
+export async function getEmotionState(userId: number = 1, roleId: number = 1) {
+  // 返回默认状态
+  return {
+    emotion: EmotionType.NEUTRAL,
+    intensity: 0.5,
+    last_update: Date.now()
+  };
+}
+
+// 为兼容旧的情绪API，提供updateEmotionPreference函数实现
+export async function updateEmotionPreference(
+  emotion: string, 
+  response: string, 
+  feedback: number = 1,
+  userId: number = 1, 
+  roleId: number = 1
+) {
+  // 直接返回成功
+  return true;
+}

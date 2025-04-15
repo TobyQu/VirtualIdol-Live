@@ -167,7 +167,7 @@ export const initialFormData = {
         "emotion": "neutral"
     },
     "emotionConfig": {
-        "enabled": true,
+        "enabled": false,
         "sensitivity": 0.5,
         "changeSpeed": 0.5,
         "defaultEmotion": "neutral",

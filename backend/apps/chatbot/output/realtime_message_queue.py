@@ -7,7 +7,6 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from ..utils.chat_message_utils import format_chat_text
 from ..utils.str_utils import remove_special_characters, remove_emojis
-from ..emotion.emotion_manage import GenerationEmote
 from ..emotion.behavior_action_management import ChatActionParser, BehaviorActionMessage
 import threading
 
@@ -126,21 +125,6 @@ def realtime_callback(role_name: str, you_name: str, content: str, end_bool: boo
         preview = message_text[:30] + "..." if len(message_text) > 30 else message_text
         logger.info(f"处理完成: {preview}")
 
-        # 生成人物表情
-        try:
-            # 在这里动态导入配置，避免循环依赖
-            from ..config import get_sys_config
-            sys_config = get_sys_config()
-            
-            generation_emote = GenerationEmote(llm_model_driver=sys_config.llm_model_driver,
-                                              llm_model_driver_type=sys_config.conversation_llm_model_driver_type)
-            emote = generation_emote.generation_emote(
-                query=message_text)
-            logger.debug(f"生成表情: {emote}")
-        except Exception as e:
-            logger.error(f"生成表情时出错: {str(e)}")
-            emote = "neutral"  # 使用默认表情
-            
         # 解析并生成动作消息
         try:
             logger.info(f"开始解析消息中的动作指令: '{message_text[:100]}...'")  # 只记录前100个字符
@@ -153,6 +137,9 @@ def realtime_callback(role_name: str, you_name: str, content: str, end_bool: boo
             else:
                 # 如果获取实例失败，使用后备解析函数
                 behavior_action = fallback_parse_action(message_text)
+            
+            # 设置表情
+            emote = behavior_action.emote
             
             # 仅当解析出非默认动作时才发送动作消息
             if behavior_action.action != "idle_01" or behavior_action.emote != "neutral":
@@ -171,8 +158,9 @@ def realtime_callback(role_name: str, you_name: str, content: str, end_bool: boo
         except Exception as e:
             logger.error(f"解析动作时出错: {str(e)}")
             logger.error(traceback.format_exc())  # 记录堆栈跟踪
+            emote = "neutral"  # 设置默认表情
 
-        # 发送文本消息
+        # 发送文本消息 - 这里使用解析出的emote，保持与动作消息一致
         text_message = RealtimeMessage(
             type="user", user_name=you_name, content=message_text, emote=emote)
         logger.info(f"发送文本消息: type='user', user_name='{you_name}', emote='{emote}', content_length={len(message_text)}")

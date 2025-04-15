@@ -1,3 +1,4 @@
+import logging
 import os
 from django.conf import settings
 from django.shortcuts import render, get_object_or_404
@@ -16,8 +17,10 @@ from .serializers import CustomRoleSerializer, UploadedImageSerializer, Uploaded
 from .config import get_sys_config
 from .config.sys_config import sys_code
 from .models import CustomRoleModel, BackgroundImageModel, VrmModel, RolePackageModel, SysConfigModel
-from .emotion.emotion_state_manager import EmotionStateManager
 import logging
+import uuid
+import shutil
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 
@@ -38,26 +41,13 @@ def chat(request):
         
         logger.info(f"收到聊天请求: query={query}, you_name={you_name}, user_id={user_id}, role_id={role_id}")
         
-        # 获取情感状态管理器
-        emotion_manager = EmotionStateManager.get_manager(user_id, role_id)
-        
-        # 更新情绪状态
-        emotion_state = emotion_manager.update_emotion(query)
-        
         # 处理聊天
         response = get_process_core().chat(you_name=you_name, query=query)
-        
-        # 获取当前情绪状态
-        current_emotion = emotion_manager.get_current_emotion()
         
         return Response({
             "code": 0,
             "message": "success",
-            "response": response,
-            "emotion": {
-                "type": current_emotion.emotion.value,
-                "intensity": current_emotion.intensity
-            }
+            "response": response
         })
     except Exception as e:
         logger.error(f"聊天处理出错: {str(e)}", exc_info=True)
@@ -491,69 +481,6 @@ def show_system_vrm_models(request):
         }
     ]
     return Response({"response": vrm_models, "code": "200"})
-
-
-@api_view(['GET'])
-def get_emotion_state(request):
-    """获取当前情感状态"""
-    try:
-        user_id = request.GET.get('user_id', 1)
-        role_id = request.GET.get('role_id', 1)
-        
-        emotion_manager = EmotionStateManager.get_manager(user_id, role_id)
-        current_emotion = emotion_manager.get_current_emotion()
-        
-        return Response({
-            "code": 0,
-            "message": "success",
-            "data": {
-                "emotion": current_emotion.emotion.value,
-                "intensity": current_emotion.intensity,
-                "last_update": current_emotion.last_update
-            }
-        })
-    except Exception as e:
-        logger.error(f"获取情感状态失败: {str(e)}", exc_info=True)
-        return Response({
-            "code": 500,
-            "message": str(e),
-            "data": None
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-@api_view(['POST'])
-def update_emotion_preference(request):
-    """更新情感偏好"""
-    try:
-        data = json.loads(request.body.decode('utf-8'))
-        user_id = data.get('user_id', 1)
-        role_id = data.get('role_id', 1)
-        emotion = data.get('emotion')
-        response = data.get('response')
-        feedback = data.get('feedback', 1)
-        
-        if not all([emotion, response]):
-            return Response({
-                "code": 400,
-                "message": "Missing required parameters",
-                "data": None
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        emotion_manager = EmotionStateManager.get_manager(user_id, role_id)
-        emotion_manager.track_user_preference(emotion, response, feedback)
-        
-        return Response({
-            "code": 0,
-            "message": "success",
-            "data": None
-        })
-    except Exception as e:
-        logger.error(f"更新情感偏好失败: {str(e)}", exc_info=True)
-        return Response({
-            "code": 500,
-            "message": str(e),
-            "data": None
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @csrf_exempt
