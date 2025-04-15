@@ -125,8 +125,21 @@ def startup():
         RealtimeMessageQueryJobTask.start()
         logger.info("RealtimeMessageQueryJobTask启动成功")
         
-        # 5. 启动聊天历史记忆队列
-        logger.info("5. 启动ChatHistoryMessageQueryJobTask...")
+        # 5. 启动闲置动作定时任务
+        logger.info("5. 启动闲置动作定时任务...")
+        try:
+            # 暂时注释掉闲置动作定时任务，以便测试对话中的动作解析功能
+            # from .schedule.Idle_schedule import idle_action_job, run_idle_action_job
+            # # 设置闲置动作间隔时间为30秒
+            # run_idle_action_job(30, idle_action_job)
+            logger.info("闲置动作定时任务已禁用，用于测试对话动作解析")
+        except Exception as e:
+            logger.error(f"处理闲置动作定时任务失败: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+        
+        # 6. 启动聊天历史记忆队列
+        logger.info("6. 启动ChatHistoryMessageQueryJobTask...")
         from .chat.chat_history_queue import ChatHistoryMessageQueryJobTask
         ChatHistoryMessageQueryJobTask.start()
         logger.info("ChatHistoryMessageQueryJobTask启动成功")

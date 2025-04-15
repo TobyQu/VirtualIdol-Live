@@ -47,3 +47,5 @@ psutil>=7.0.0
 importlib-metadata>=6.8.0
 safetensors>=0.4.3
 pydantic>=2.0.0
+alibabacloud-bailian20230601>=1.0.0
+alibabacloud-tea-util>=0.3.8

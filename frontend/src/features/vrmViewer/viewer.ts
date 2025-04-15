@@ -247,15 +247,19 @@ export class Viewer {
         }
         
         try {
+            console.log(`开始加载动画 ${animName}，路径：${animPath}`);
             const animation = await loadMixamoAnimation(animPath, this.model.vrm);
             if (animation) {
                 this.model.clipMap.set(animName, animation);
-                console.log(`动画 ${animName} 加载成功`);
+                console.log(`动画 ${animName} 加载成功，已添加到 clipMap`);
             } else {
-                console.warn(`动画 ${animName} 加载失败：返回了空动画`);
+                const error = new Error(`动画 ${animName} 加载失败：返回了空动画`);
+                console.error(error);
+                throw error;
             }
         } catch (error) {
             console.error(`加载动画 ${animName} 时出错:`, error);
+            throw error;  // 重新抛出错误，让上层处理
         }
     }
 
@@ -278,7 +282,8 @@ export class Viewer {
                         
                         // 如果是缩放操作，每隔一定帧数重新应用一次物理参数
                         if (updateCount % 10 === 0 && scale !== 1.0) {
-                            this.model.setScale(scale);
+                            // 移除不存在的setScale调用
+                            // this.model.setScale(scale);
                         }
                         
                         updateCount++;
@@ -297,29 +302,39 @@ export class Viewer {
 
     // 将动画加载逻辑抽取为单独的方法
     private async loadRemainingAnimations() {
-        setTimeout(async () => {
-            const animationPromises = [
-                // 日常动作
-                this.loadAnimationSafely("idle_02", "/assets/animations/daily/idle_02.fbx"),
-                this.loadAnimationSafely("idle_03", "/assets/animations/daily/idle_03.fbx"),
-                this.loadAnimationSafely("idle_happy_01", "/assets/animations/daily/idle_happy_01.fbx"),
-                this.loadAnimationSafely("idle_happy_02", "/assets/animations/daily/idle_happy_02.fbx"),
-                this.loadAnimationSafely("idle_happy_03", "/assets/animations/daily/idle_happy_03.fbx"),
-                this.loadAnimationSafely("standing_greeting", "/assets/animations/daily/standing_greeting.fbx"),
-                this.loadAnimationSafely("thinking", "/assets/animations/daily/thinking.fbx"),
-                
-                // 表情动作
-                this.loadAnimationSafely("excited", "/assets/animations/emote/excited.fbx"),
-                this.loadAnimationSafely("angry", "/assets/animations/emote/angry.fbx"),
-                
-                // 舞蹈动作
-                this.loadAnimationSafely("silly_dancing", "/assets/animations/dance/silly_dancing.fbx"),
-                this.loadAnimationSafely("rumba_dancing", "/assets/animations/dance/rumba_dancing.fbx")
-            ];
+        console.log("开始加载剩余动画...");
+        const animationPromises = [
+            // 日常动作
+            this.loadAnimationSafely("idle_02", "/assets/animations/daily/idle_02.fbx"),
+            this.loadAnimationSafely("idle_03", "/assets/animations/daily/idle_03.fbx"),
+            this.loadAnimationSafely("idle_happy_01", "/assets/animations/daily/idle_happy_01.fbx"),
+            this.loadAnimationSafely("idle_happy_02", "/assets/animations/daily/idle_happy_02.fbx"),
+            this.loadAnimationSafely("idle_happy_03", "/assets/animations/daily/idle_happy_03.fbx"),
+            this.loadAnimationSafely("standing_greeting", "/assets/animations/daily/standing_greeting.fbx"),
+            this.loadAnimationSafely("thinking", "/assets/animations/daily/thinking.fbx"),
+            this.loadAnimationSafely("kiss_01", "/assets/animations/daily/kiss_01.fbx"),
+            this.loadAnimationSafely("sitting", "/assets/animations/daily/sitting.fbx"),
+            this.loadAnimationSafely("talking_01", "/assets/animations/daily/talking_01.fbx"),
+            this.loadAnimationSafely("talking_02", "/assets/animations/daily/talking_02.fbx"),
             
+            // 表情动作
+            this.loadAnimationSafely("excited", "/assets/animations/emote/excited.fbx"),
+            this.loadAnimationSafely("angry", "/assets/animations/emote/angry.fbx"),
+            
+            // 舞蹈动作
+            this.loadAnimationSafely("silly_dancing", "/assets/animations/dance/silly_dancing.fbx"),
+            this.loadAnimationSafely("rumba_dancing", "/assets/animations/dance/rumba_dancing.fbx"),
+            this.loadAnimationSafely("bboy_hip_hop", "/assets/animations/dance/bboy_hip_hop.fbx"),
+            this.loadAnimationSafely("flair", "/assets/animations/dance/flair.fbx")
+        ];
+        
+        try {
             await Promise.all(animationPromises);
-            console.log("所有动画加载完成");
-        }, 1000);
+            console.log("所有动画加载完成，当前clipMap中的动画：", Array.from(this.model?.clipMap.keys() || []));
+        } catch (error) {
+            console.error("加载动画时发生错误：", error);
+            // 尽管有错误，我们仍然继续执行，因为部分动画可能已经成功加载
+        }
     }
 
     // 添加公共方法

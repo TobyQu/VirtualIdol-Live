@@ -2,6 +2,20 @@ import logging
 from typing import Dict, Any, Optional, List
 import os
 
+# 在导入其他模块之前设置日志级别
+# 禁用所有可能产生冗长日志的模块
+logging.getLogger("litellm").setLevel(logging.ERROR)
+logging.getLogger("litellm.utils").setLevel(logging.ERROR)
+logging.getLogger("httpx").setLevel(logging.ERROR)
+logging.getLogger("httpcore").setLevel(logging.ERROR)
+logging.getLogger("urllib3").setLevel(logging.ERROR)
+logging.getLogger("requests").setLevel(logging.ERROR)
+logging.getLogger("aiohttp").setLevel(logging.ERROR)
+logging.getLogger("asyncio").setLevel(logging.ERROR)
+
+# 设置根日志记录器的级别
+logging.getLogger().setLevel(logging.INFO)
+
 from ..llms.llm_model_strategy import LlmModelDriver
 from ..reflection.reflection import ImportanceRating, PortraitAnalysis
 from .config_manager import get_config_manager, SystemConfig
@@ -39,12 +53,21 @@ class SysConfig(SysConfigInterface):
         try:
             import litellm
             import litellm.utils
-            # 禁用所有truncate相关功能
+            
+            # 禁用litellm的HTTP请求日志
+            litellm.set_verbose = False
+            litellm.set_debug = False
+            
+            # 禁用litellm的请求日志
+            litellm.success_callback = []
+            litellm.failure_callback = []
+            
             litellm.set_max_tokens = False
             
             # 覆盖litellm的truncation检查
             def no_truncate(*args, **kwargs):
-                return args[0]  # 直接返回原始消息，不做任何截断
+                return {}
+            
             litellm.utils.truncate_messages = no_truncate
             logger.info("成功应用litellm补丁，禁用truncate功能")
         except Exception as e:

@@ -3,10 +3,10 @@
   "characterConfig": {
     "character": 1,
     "character_name": "爱莉",
-    "yourName": "用户",
-    "vrmModel": "/assets/vrm/活力少女.vrm",
+    "yourName": "老公",
+    "vrmModel": "/assets/vrm/default.vrm",
     "vrmModelType": "system",
-    "cameraDistance": 8.2
+    "cameraDistance": 8.8
   },
   "languageModelConfig": {
     "openai": {
@@ -47,7 +47,7 @@
     "B_COOKIE": ""
   },
   "ttsConfig": {
-    "ttsVoiceId": "female-yujie",
+    "ttsVoiceId": "female-shaonv",
     "emotion": "neutral",
     "ttsType": "minimax"
   }
