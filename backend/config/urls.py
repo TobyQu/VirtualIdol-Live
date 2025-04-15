@@ -9,15 +9,43 @@ from apps.speech import views
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="VirtualWife API",
+        title="虚拟妻子 API",
         default_version='v1',
-        description="VirtualWife API documentation",
+        description="""
+# 虚拟妻子 API 文档
+
+这是虚拟妻子项目的API接口文档，包含以下主要模块：
+
+## 聊天模块
+
+聊天相关的API，包括基础聊天、角色管理和配置等功能。
+
+## 语音模块 
+
+文本转语音、声音选择和情绪管理等功能。
+
+## 角色管理
+
+自定义角色的创建、编辑和管理功能。
+
+## 系统配置
+
+系统设置和参数配置的API。
+
+## 记忆管理
+
+长期记忆相关功能的API。
+        """,
         terms_of_service="https://www.google.com/policies/terms/",
         contact=openapi.Contact(email="contact@virtualwife.local"),
         license=openapi.License(name="BSD License"),
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
+    patterns=[
+        path('chatbot/', include('apps.chatbot.urls')),
+        path('api/speech/', include('apps.speech.urls')),
+    ],
 )
 
 urlpatterns = [

@@ -8,6 +8,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 from .character import role_package_manage
 from .insight.bilibili_api.bili_live_client import lazy_bilibili_live
@@ -25,13 +27,49 @@ from PIL import Image
 logger = logging.getLogger(__name__)
 
 
+@swagger_auto_schema(
+    method='post',
+    operation_description="用户与虚拟角色的聊天接口",
+    tags=['聊天'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['query', 'you_name'],
+        properties={
+            'query': openapi.Schema(type=openapi.TYPE_STRING, description='用户的聊天内容'),
+            'you_name': openapi.Schema(type=openapi.TYPE_STRING, description='用户名称'),
+            'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='用户ID（可选，默认为1）'),
+            'role_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='角色ID（可选，默认为1）')
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description="成功响应",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'code': openapi.Schema(type=openapi.TYPE_INTEGER, description='状态码'),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='状态消息'),
+                    'response': openapi.Schema(type=openapi.TYPE_STRING, description='角色的回复内容')
+                }
+            )
+        ),
+        500: openapi.Response(description="服务器错误")
+    }
+)
 @api_view(['POST'])
 def chat(request):
-    '''
-      聊天
-    :param request:
-    :return:
-    '''
+    """
+    用户与虚拟角色的聊天接口
+
+    请求参数:
+    - query: 用户的聊天内容
+    - you_name: 用户名称
+    - user_id: 用户ID (可选，默认为1)
+    - role_id: 角色ID (可选，默认为1)
+    
+    返回:
+    - response: 角色的回复内容
+    """
     try:
         data = json.loads(request.body.decode('utf-8'))
         query = data["query"]
@@ -68,7 +106,15 @@ def options_response(request):
 def save_config(request):
     if request.method == 'OPTIONS':
         return options_response(request)
-    """保存系统配置"""
+    """
+    保存系统配置
+
+    请求参数:
+    - 配置对象: 包含系统所有配置的JSON对象，包括语言模型、角色、TTS等配置
+    
+    返回:
+    - 保存状态信息
+    """
     try:
         sys_code = "adminSettings"  # 固定的配置代码
         config_data = request.data
@@ -156,7 +202,12 @@ def save_config(request):
 def get_config(request):
     if request.method == 'OPTIONS':
         return options_response(request)
-    """获取系统配置"""
+    """
+    获取系统配置
+
+    返回:
+    - config: 完整的系统配置JSON，包括语言模型、角色、TTS等配置
+    """
     try:
         config = SysConfigModel.objects.first()
         if config:
@@ -223,16 +274,24 @@ def get_config(request):
 
 @api_view(['GET'])
 def clear_memory(request):
-    '''
-      删除测试记忆
-    :return:
-    '''
+    """
+    清除测试记忆数据
+    
+    返回:
+    - 清除操作的结果
+    """
     result = get_sys_config().memory_storage_driver.clear("alan")
     return Response({"response": result, "code": "200"})
 
 
 @api_view(['GET'])
 def custom_role_list(request):
+    """
+    获取所有自定义角色列表
+    
+    返回:
+    - 自定义角色列表，包含所有角色信息
+    """
     result = CustomRoleModel.objects.all()
     serializer = CustomRoleSerializer(data=result, many=True)
     serializer.is_valid()
@@ -242,12 +301,35 @@ def custom_role_list(request):
 
 @api_view(['GET'])
 def custom_role_detail(request, pk):
+    """
+    获取指定自定义角色详情
+    
+    请求参数:
+    - pk: 角色ID
+    
+    返回:
+    - 角色详细信息
+    """
     role = get_object_or_404(CustomRoleModel, pk=pk)
     return Response({"response": role, "code": "200"})
 
 
 @api_view(['POST'])
 def create_custom_role(request):
+    """
+    创建新的自定义角色
+    
+    请求参数:
+    - role_name: 角色名称
+    - persona: 角色基本信息
+    - personality: 角色性格描述
+    - scenario: 对话场景和背景
+    - examples_of_dialogue: 对话示例
+    - custom_role_template_type: 模板类型
+    
+    返回:
+    - 创建状态信息
+    """
     data = request.data  # 获取请求的 JSON 数据
 
     # 从 JSON 数据中提取字段值
@@ -275,6 +357,21 @@ def create_custom_role(request):
 
 @api_view(['POST'])
 def edit_custom_role(request, pk):
+    """
+    编辑现有自定义角色
+    
+    请求参数:
+    - pk: 角色ID
+    - role_name: 角色名称 (可选)
+    - persona: 角色基本信息 (可选)
+    - personality: 角色性格描述 (可选)
+    - scenario: 对话场景和背景 (可选)
+    - examples_of_dialogue: 对话示例 (可选)
+    - custom_role_template_type: 模板类型 (可选)
+    
+    返回:
+    - 编辑状态信息
+    """
     role = get_object_or_404(CustomRoleModel, pk=pk)
     data = request.data
 
@@ -293,6 +390,15 @@ def edit_custom_role(request, pk):
 
 @api_view(['POST'])
 def delete_custom_role(request, pk):
+    """
+    删除自定义角色
+    
+    请求参数:
+    - pk: 角色ID
+    
+    返回:
+    - 删除操作状态
+    """
     role = get_object_or_404(CustomRoleModel, pk=pk)
     # 删除对应的角色安装包
     if role.role_package_id != -1:
@@ -309,6 +415,15 @@ def delete_custom_role(request, pk):
 
 @api_view(['POST'])
 def delete_background_image(request, pk):
+    """
+    删除背景图片
+
+    请求参数:
+    - pk: 背景图片的ID
+    
+    返回:
+    - 删除操作状态
+    """
     # 删除数据
     background_image_model = get_object_or_404(BackgroundImageModel, pk=pk)
     background_image_model.delete()
@@ -326,7 +441,13 @@ def delete_background_image(request, pk):
 @api_view(['POST'])
 def upload_background_image(request):
     """
-    Upload a background image.
+    上传背景图片
+
+    请求参数:
+    - image: 图片文件
+    
+    返回:
+    - 上传操作状态
     """
     serializer = UploadedImageSerializer(data=request.data)
     if serializer.is_valid():
@@ -342,7 +463,10 @@ def upload_background_image(request):
 @api_view(['GET'])
 def show_background_image(request):
     """
-    Retrieve a list of uploaded background images.
+    获取所有上传的背景图片列表
+    
+    返回:
+    - 背景图片列表，包含URL和元数据
     """
     images = BackgroundImageModel.objects.all()
     serializer = UploadedImageSerializer(images, many=True)
@@ -353,6 +477,12 @@ def show_background_image(request):
 def delete_vrm_model(request, pk):
     """
     删除VRM模型数据
+    
+    请求参数:
+    - pk: VRM模型ID
+    
+    返回:
+    - 删除操作状态
     """
     # 删除数据
     vrm_model = get_object_or_404(VrmModel, pk=pk)
@@ -370,7 +500,13 @@ def delete_vrm_model(request, pk):
 @api_view(['POST'])
 def upload_vrm_model(request):
     """
-    上传VRM模型
+    上传VRM模型文件
+
+    请求参数:
+    - vrm: VRM模型文件
+    
+    返回:
+    - 上传操作状态
     """
     serializer = UploadedVrmModelSerializer(data=request.data)
     if serializer.is_valid():
@@ -388,6 +524,12 @@ def upload_vrm_model(request):
 def upload_role_package(request):
     """
     上传角色安装包
+    
+    请求参数:
+    - role_package: 角色安装包文件
+    
+    返回:
+    - 上传和安装结果状态
     """
     serializer = UploadedRolePackageModelSerializer(data=request.data)
     if serializer.is_valid():
@@ -434,7 +576,10 @@ def upload_role_package(request):
 @api_view(['GET'])
 def show_user_vrm_models(request):
     """
-    获取VRM模型列表
+    获取用户上传的VRM模型列表
+    
+    返回:
+    - VRM模型列表，包含ID、类型、名称等信息
     """
     vrm_models = VrmModel.objects.all()
     serializer = UploadedVrmModelSerializer(vrm_models, many=True)
@@ -443,11 +588,12 @@ def show_user_vrm_models(request):
 
 @api_view(['GET'])
 def show_system_vrm_models(request):
-    '''
-      获取角色模型列表
-    :param request:
-    :return:
-    '''
+    """
+    获取系统预置的VRM模型列表
+    
+    返回:
+    - 系统VRM模型列表，包含ID、类型、名称等信息
+    """
     vrm_models = [
         {
             "id": "sys_01",
@@ -488,7 +634,17 @@ def show_system_vrm_models(request):
 def check_memory_status(request):
     if request.method == 'OPTIONS':
         return options_response(request)
-    """检查长期记忆模块状态"""
+    """
+    检查长期记忆模块状态
+    
+    返回:
+    - memory_enabled: 长期记忆是否启用
+    - memory_driver_initialized: 记忆驱动是否已初始化
+    - faiss_index_exists: FAISS索引文件是否存在
+    - faiss_index_info: FAISS索引信息
+    - metadata_db_exists: 元数据库是否存在
+    - metadata_db_count: 元数据库记录数
+    """
     try:
         from .config import get_sys_config
         import os
@@ -567,7 +723,14 @@ def check_memory_status(request):
 def reinitialize_memory_service(request):
     if request.method == 'OPTIONS':
         return options_response(request)
-    """手动重新初始化长期记忆服务"""
+    """
+    手动重新初始化长期记忆服务
+    
+    返回:
+    - memory_initialized: 记忆驱动是否成功初始化
+    - long_memory_initialized: 长期记忆是否成功初始化
+    - long_memory_enabled: 长期记忆功能是否启用
+    """
     try:
         from .config import get_sys_config
         

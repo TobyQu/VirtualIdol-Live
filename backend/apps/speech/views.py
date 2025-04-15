@@ -13,9 +13,46 @@ from .tts.tts_driver import TTSDriver
 from django.http import HttpResponse, StreamingHttpResponse
 from rest_framework import status
 import re
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 logger = logging.getLogger(__name__)
 
+@swagger_auto_schema(
+    method='post',
+    operation_description="根据文本生成音频",
+    tags=['语音'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['text', 'voice_id'],
+        properties={
+            'text': openapi.Schema(type=openapi.TYPE_STRING, description='要转换为音频的文本'),
+            'voice_id': openapi.Schema(type=openapi.TYPE_STRING, description='声音ID'),
+            'tts_type': openapi.Schema(type=openapi.TYPE_STRING, description='TTS类型，默认为"minimax"'),
+            'emotion': openapi.Schema(type=openapi.TYPE_STRING, description='情绪参数，可选值包括 "happy", "sad", "angry", "fearful", "disgusted", "surprised", "neutral"，默认"neutral"'),
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description="成功响应",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'code': openapi.Schema(type=openapi.TYPE_STRING, description='状态码'),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='状态消息'),
+                    'response': openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'audio_url': openapi.Schema(type=openapi.TYPE_STRING, description='生成的音频URL')
+                        }
+                    )
+                }
+            )
+        ),
+        400: openapi.Response(description="缺少必要参数"),
+        500: openapi.Response(description="服务器错误")
+    }
+)
 @api_view(['POST'])
 def generate(request):
     """
@@ -130,6 +167,31 @@ def generate_stream(request):
 def delete_file(file_path):
     os.remove(file_path)
 
+@swagger_auto_schema(
+    method='post',
+    operation_description="获取可用的声音列表",
+    tags=['语音'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'type': openapi.Schema(type=openapi.TYPE_STRING, description='TTS类型 (可选，仅支持minimax)'),
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description="成功响应",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'code': openapi.Schema(type=openapi.TYPE_STRING, description='状态码'),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='状态消息'),
+                    'response': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT), description='声音列表')
+                }
+            )
+        ),
+        500: openapi.Response(description="服务器错误")
+    }
+)
 @api_view(['POST'])
 def get_voices(request):
     """
@@ -159,6 +221,25 @@ def get_voices(request):
             'response': None
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@swagger_auto_schema(
+    method='get',
+    operation_description="获取支持的情绪列表",
+    tags=['语音'],
+    responses={
+        200: openapi.Response(
+            description="成功响应",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'code': openapi.Schema(type=openapi.TYPE_STRING, description='状态码'),
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='状态消息'),
+                    'response': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_OBJECT), description='情绪列表')
+                }
+            )
+        ),
+        500: openapi.Response(description="服务器错误")
+    }
+)
 @api_view(['GET'])
 def get_emotions(request):
     """
@@ -187,7 +268,14 @@ def get_emotions(request):
 @api_view(['POST'])
 def translation(request):
     """
-    translation
+    翻译文本
+
+    请求参数:
+    - text: 要翻译的文本
+    - target_language: 目标语言代码
+    
+    返回:
+    - 翻译后的文本
     """
     try:
         data = json.loads(request.body.decode('utf-8'))

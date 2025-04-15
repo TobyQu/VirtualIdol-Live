@@ -234,3 +234,26 @@ LOGGING = {
 
 # URL 配置
 APPEND_SLASH = True  # 自动添加 URL 末尾的斜杠 
+
+# Swagger 和 ReDoc 配置
+SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
+    'SECURITY_DEFINITIONS': None,
+    'DEFAULT_INFO': 'config.urls.schema_view',
+    'DEFAULT_API_URL': 'http://localhost:8000/',
+    'OPERATIONS_SORTER': 'alpha',
+    'TAGS_SORTER': 'alpha',
+    'DOC_EXPANSION': 'list',
+    'DEEP_LINKING': True,
+    'DEFAULT_MODEL_RENDERING': 'example',
+    'DEFAULT_MODEL_DEPTH': 3,
+}
+
+# ReDoc 专用设置
+REDOC_SETTINGS = {
+    'LAZY_RENDERING': True,
+    'HIDE_HOSTNAME': False,
+    'EXPAND_RESPONSES': '200,201',
+    'PATH_IN_MIDDLE': False,
+    'REQUIRED_PROPS_FIRST': True,
+} 
