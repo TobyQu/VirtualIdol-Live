@@ -70,6 +70,7 @@ export type SettingsFormValues = {
   examples_of_dialogue: string
   custom_role_template_type: string
   ttsVoiceId: string
+  cameraDistance: string
 }
 
 type Props = {
@@ -362,6 +363,8 @@ export function SettingsSheet({
             character_name: values.characterName,
             yourName: values.yourName,
             vrmModel: values.vrmModel,
+            vrmModelType: values.vrmModelType,
+            cameraDistance: values.cameraDistance
           },
           background_url: values.backgroundUrl,
           languageModelConfig: {
@@ -454,6 +457,7 @@ export function SettingsSheet({
     examples_of_dialogue: z.string().optional(),
     custom_role_template_type: z.string().optional(),
     ttsVoiceId: z.string().optional(),
+    cameraDistance: z.string().optional(),
   })
 
   const form = useForm<SettingsFormValues>({
@@ -487,7 +491,8 @@ export function SettingsSheet({
       scenario: customRole?.scenario || "",
       examples_of_dialogue: customRole?.examples_of_dialogue || "",
       custom_role_template_type: customRole?.custom_role_template_type || "",
-      ttsVoiceId: globalConfig?.ttsConfig?.ttsVoiceId || "-1"
+      ttsVoiceId: globalConfig?.ttsConfig?.ttsVoiceId || "-1",
+      cameraDistance: globalConfig?.characterConfig?.cameraDistance || "1.0"
     }
   });
 

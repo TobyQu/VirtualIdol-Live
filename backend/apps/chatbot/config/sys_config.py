@@ -127,7 +127,8 @@ class SysConfig:
                 "character_name": "爱莉",
                 "yourName": "用户",
                 "vrmModel": "/assets/vrm/default.vrm",
-                "vrmModelType": "system"
+                "vrmModelType": "system",
+                "cameraDistance": 8.0
             },
             "languageModelConfig": {
                 "openai": {

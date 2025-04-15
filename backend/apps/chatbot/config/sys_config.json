@@ -4,8 +4,9 @@
     "character": 1,
     "character_name": "爱莉",
     "yourName": "用户",
-    "vrmModel": "/assets/vrm/后藤仁.vrm",
-    "vrmModelType": "system"
+    "vrmModel": "/assets/vrm/活力少女.vrm",
+    "vrmModelType": "system",
+    "cameraDistance": 8.2
   },
   "languageModelConfig": {
     "openai": {

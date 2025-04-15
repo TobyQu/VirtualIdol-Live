@@ -734,7 +734,7 @@ function AppContent({
                         {!isDetached && (
                             <>
                                 {/* 分割手柄 */}
-                                <ResizableHandle withHandle />
+                                <ResizableHandle  />
                                 
                                 {/* 聊天区域 (默认30%) */}
                                 <ResizablePanel 

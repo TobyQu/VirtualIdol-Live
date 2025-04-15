@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from "react"
-import { Form, FormField, FormItem, FormControl, FormLabel } from "@/components/ui/form"
+import { Form, FormField, FormItem, FormControl, FormLabel, FormDescription } from "@/components/ui/form"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -8,10 +8,12 @@ import { ViewerContext } from "@/features/vrmViewer/viewerContext"
 import { getAssets, AssetFile, AssetCategory, uploadBackground, uploadVrmModel, queryBackground, queryUserVrmModels, generateMediaUrl, saveAsset, deleteAsset } from "@/features/media/mediaApi"
 import { GlobalConfig } from "@/features/config/configApi"
 import { UseFormReturn } from "react-hook-form"
-import { Trash2, Upload } from "lucide-react"
+import { Trash2, Upload, User2 } from "lucide-react"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { showSuccess, showError, showInfo } from "@/lib/toast"
 import { Slider } from "@/components/ui/slider"
+import { cn } from "@/lib/utils"
+import { formatFileSize } from "@/lib/utils"
 
 type AssetsSettingsProps = {
   globalConfig: GlobalConfig
@@ -372,24 +374,48 @@ export function AssetsSettings({
                 {assets.vrm.map((file) => (
                   <div 
                     key={file.path} 
-                    className={`
-                      relative border rounded p-1 cursor-pointer hover:border-primary
-                      ${selectedVrmFile === file.path ? 'border-primary border-2' : 'border-gray-200'}
-                    `}
+                    className={cn(
+                      "relative group cursor-pointer",
+                      "border rounded-lg p-2 hover:border-primary transition-colors",
+                      selectedVrmFile === file.path ? "border-primary border-2" : "border-border"
+                    )}
                     onClick={() => handleVrmFileChange(file.path)}
                   >
-                    <div className="flex justify-center items-center h-20 bg-gray-100 rounded">
-                      <span className="text-xs text-center">3D模型</span>
+                    <div className="h-20 rounded-md bg-accent flex items-center justify-center mb-1 overflow-hidden">
+                      {file.thumbnail ? (
+                        <img 
+                          src={file.thumbnail} 
+                          alt={file.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <User2 className="h-6 w-6 text-accent-foreground/20" />
+                      )}
                     </div>
-                    <p className="text-xs text-center mt-1 truncate">{file.name}</p>
                     
+                    <div className="space-y-0.5">
+                      <div className="flex justify-between items-center">
+                        <p className="text-xs font-medium leading-none truncate max-w-[70%]">
+                          {file.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatFileSize(file.size)}
+                        </p>
+                      </div>
+                    </div>
+
                     {canDeleteFile(file.path, 'vrm') && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="absolute top-1 right-1 h-6 w-6 bg-white rounded-full opacity-70 hover:opacity-100"
+                            className={cn(
+                              "absolute top-1 right-1 h-6 w-6",
+                              "opacity-0 group-hover:opacity-100 transition-opacity",
+                              "bg-background/50 backdrop-blur-sm",
+                              "hover:bg-background/80"
+                            )}
                             onClick={(e: React.MouseEvent) => e.stopPropagation()}
                             disabled={deleteLoading === file.path}
                           >
@@ -423,84 +449,43 @@ export function AssetsSettings({
               </div>
             </CardContent>
           </Card>
-          
-          {/* 添加模型缩放设置卡片 */}
+
+          {/* 添加相机距离控制表单 */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">模型缩放设置</CardTitle>
-              <CardDescription>调整3D模型的显示大小</CardDescription>
+              <CardTitle className="text-base">相机设置</CardTitle>
+              <CardDescription>调整相机与模型的距离和位置</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <FormField
                   control={form.control}
-                  name="modelScale"
+                  name="cameraDistance"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs font-medium text-foreground/70">模型缩放比例 {(globalConfig?.characterConfig?.modelScale || 1.0).toFixed(2)}</FormLabel>
+                      <FormLabel>相机距离</FormLabel>
                       <FormControl>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs">0.5</span>
+                        <div className="flex items-center space-x-2">
                           <Slider
-                            value={[globalConfig?.characterConfig?.modelScale || 1.0]}
-                            min={0.5}
-                            max={1.5}
-                            step={0.01}
-                            onValueChange={(values) => {
-                              const scale = values[0];
-                              field.onChange(scale);
-                              
-                              // 更新全局配置
-                              onChangeGlobalConfig({
-                                ...globalConfig,
-                                characterConfig: {
-                                  ...globalConfig.characterConfig,
-                                  modelScale: scale
-                                }
-                              });
-                              
-                              // 直接更新模型缩放，实现实时效果
-                              if (viewer && viewer.model) {
-                                // 应用新的缩放
-                                viewer.model.setScale(scale);
-                                
-                                // 立即重置相机以跟随模型变化
-                                viewer.resetCamera();
-                                
-                                // 添加连续更新以稳定物理效果 (特别是头发和衣服)
-                                if (viewer.model.vrm && viewer.model.vrm.springBoneManager) {
-                                  try {
-                                    // 创建一个函数，连续更新几次物理系统以稳定头发
-                                    let updateCount = 0;
-                                    const maxUpdates = 30; // 连续更新30次以稳定物理
-                                    
-                                    const stabilizePhysics = () => {
-                                      if (updateCount < maxUpdates && viewer.model?.vrm) {
-                                        try {
-                                          // 强制更新物理系统
-                                          viewer.model.vrm.update(0.016);
-                                          updateCount++;
-                                          requestAnimationFrame(stabilizePhysics);
-                                        } catch (err) {
-                                          console.warn("稳定物理时出错:", err);
-                                          // 出错时停止更新循环
-                                        }
-                                      }
-                                    };
-                                    
-                                    // 开始稳定物理效果
-                                    stabilizePhysics();
-                                  } catch (error) {
-                                    console.warn("初始化物理稳定过程时出错:", error);
-                                    // 错误处理，确保不影响UI响应
-                                  }
-                                }
+                            min={1}
+                            max={15}
+                            step={0.1}
+                            value={[field.value || 8]}
+                            onValueChange={(value) => {
+                              field.onChange(value[0]);
+                              if (viewer) {
+                                viewer.setCameraDistance(value[0]);
                               }
                             }}
                           />
-                          <span className="text-xs">1.5</span>
+                          <span className="text-sm text-muted-foreground w-12">
+                            {field.value || 8}
+                          </span>
                         </div>
                       </FormControl>
+                      <FormDescription>
+                        调整相机与模型的距离，数值越大距离越远
+                      </FormDescription>
                     </FormItem>
                   )}
                 />
@@ -508,7 +493,7 @@ export function AssetsSettings({
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         {/* 背景图片选项卡 */}
         <TabsContent value="backgrounds" className="space-y-4 mt-4">
           <Card>

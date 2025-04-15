@@ -19,6 +19,7 @@ export type VrmModel = typeof vrmModelData;
 
 // 添加接口定义
 export interface AssetFile {
+  thumbnail: any;
   name: string;
   path: string;
   size: number;

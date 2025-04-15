@@ -35,6 +35,7 @@ class CharacterConfig(BaseModel):
     yourName: str = Field(default="用户", description="用户名称")
     vrmModel: str = Field(default="/assets/vrm/default.vrm", description="VRM模型路径")
     vrmModelType: str = Field(default="system", description="VRM模型类型")
+    cameraDistance: float = Field(default=8.0, description="相机与模型的距离")
 
 
 class OpenAIConfig(BaseModel):

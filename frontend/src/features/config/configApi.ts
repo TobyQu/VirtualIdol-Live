@@ -35,6 +35,7 @@ export interface CharacterConfig {
     vrmModel: string;
     vrmModelType: string;
     modelScale: number;
+    cameraDistance: number;
 }
 
 export interface TTSConfig {
@@ -82,7 +83,14 @@ export interface EmotionConfig {
 }
 
 export interface GlobalConfig {
-    characterConfig: CharacterConfig;
+    characterConfig: {
+        character: number;
+        character_name: string;
+        yourName: string;
+        vrmModel: string;
+        vrmModelType: string;
+        cameraDistance: number;
+    };
     ttsConfig: TTSConfig;
     conversationConfig: ConversationConfig;
     memoryStorageConfig: MemoryStorageConfig;
@@ -129,7 +137,8 @@ export const initialFormData = {
         "yourName": "yuki129",
         "vrmModel": "\u308f\u305f\u3042\u3081_03.vrm",
         "vrmModelType": "system",
-        "modelScale": 1.0
+        "modelScale": 1.0,
+        "cameraDistance": 1.0
     },
     "conversationConfig": {
         "conversationType": "default",

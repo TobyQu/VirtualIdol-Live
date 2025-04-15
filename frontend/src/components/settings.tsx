@@ -114,7 +114,8 @@ export const Settings = ({
             character_name: '',
             yourName: '',
             vrmModel: '',
-            vrmModelType: ''
+            vrmModelType: '',
+            cameraDistance: 8.0
         },
         ttsConfig: {
             ttsType: 'minimax',
@@ -346,7 +347,8 @@ export const Settings = ({
                 character_name: '',
                 yourName: '',
                 vrmModel: '',
-                vrmModelType: ''
+                vrmModelType: '',
+                cameraDistance: 8.0
             },
             ttsConfig: {
                 ttsType: 'Edge',
