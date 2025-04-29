@@ -3,10 +3,10 @@
   "characterConfig": {
     "character": 1,
     "character_name": "爱莉",
-    "yourName": "老公",
-    "vrmModel": "/assets/vrm/default.vrm",
+    "yourName": "用户",
+    "vrmModel": "/assets/vrm/Flinna.vrm",
     "vrmModelType": "system",
-    "cameraDistance": 8.8
+    "cameraDistance": 1.0
   },
   "languageModelConfig": {
     "openai": {
@@ -33,14 +33,14 @@
     "faissMemory": {
       "dataDir": "storage/memory"
     },
-    "enableLongMemory": true,
+    "enableLongMemory": false,
     "enableSummary": false,
     "languageModelForSummary": "openai",
     "enableReflection": false,
     "languageModelForReflection": "openai",
     "local_memory_num": 5
   },
-  "background_url": "/assets/backgrounds/default.png",
+  "background_url": "/assets/backgrounds/blue.png",
   "enableLive": false,
   "liveStreamingConfig": {
     "B_ROOM_ID": "",
