@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { DetachedWindowState, WindowManagerContextType, WindowMessageType } from './types';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { DetachedWindowState, WindowManagerContextType, WindowMessageType, ProcessedMessage } from './types';
 import { GlobalConfig } from '@/features/config/configApi';
 import { Message } from '@/features/messages/messages';
 
@@ -42,10 +42,41 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
     chatWindow: null
   });
   const [isClient, setIsClient] = useState(false);
+  
+  // 使用ref存储已处理的消息，避免重复处理
+  const processedMessages = useRef<ProcessedMessage[]>([]);
+  
+  // 清理过期的已处理消息记录
+  const cleanupProcessedMessages = () => {
+    const now = Date.now();
+    const MAX_AGE = 10000; // 10秒过期
+    processedMessages.current = processedMessages.current.filter(
+      msg => now - msg.timestamp < MAX_AGE
+    );
+  };
+  
+  // 添加已处理消息记录
+  const addProcessedMessage = (messageKey: string) => {
+    cleanupProcessedMessages();
+    processedMessages.current.push({
+      messageKey,
+      timestamp: Date.now()
+    });
+  };
+  
+  // 检查消息是否已处理
+  const isMessageProcessed = (messageKey?: string) => {
+    if (!messageKey) return false;
+    return processedMessages.current.some(msg => msg.messageKey === messageKey);
+  };
 
   // 检查是否在客户端
   useEffect(() => {
     setIsClient(true);
+    
+    // 设置定期清理处理过的消息记录
+    const cleanupInterval = setInterval(cleanupProcessedMessages, 30000);
+    return () => clearInterval(cleanupInterval);
   }, []);
 
   // 处理来自分离窗口的消息
@@ -66,18 +97,41 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         case WindowMessageType.CHAT_MESSAGE:
           // 处理聊天消息
           console.log("收到独立窗口发送的聊天消息");
-          // 如果消息包含了聊天记录，先更新本地聊天记录
-          if (data.chatLog && Array.isArray(data.chatLog)) {
-            setChatLog(data.chatLog);
+          
+          // 检查消息是否已处理过（通过messageKey）
+          if (data.messageKey && isMessageProcessed(data.messageKey)) {
+            console.log("忽略重复处理的消息:", data.messageKey);
+            return;
           }
           
-          if (onChatProcessStart && data.content) {
-            onChatProcessStart(
-              globalConfig,
-              'user',
-              data.user_name || globalConfig?.characterConfig?.yourName || '你',
-              data.content
-            );
+          // 检查消息是否已存在于聊天记录中，避免重复
+          const isDuplicate = chatLog.some(
+            msg => msg.role === 'user' && 
+                   msg.content === data.content && 
+                   msg.user_name === data.user_name
+          );
+
+          if (!isDuplicate) {
+            // 如果消息包含了聊天记录，先更新本地聊天记录
+            if (data.chatLog && Array.isArray(data.chatLog)) {
+              setChatLog(data.chatLog);
+            }
+            
+            if (onChatProcessStart && data.content) {
+              // 记录已处理的消息
+              if (data.messageKey) {
+                addProcessedMessage(data.messageKey);
+              }
+              
+              onChatProcessStart(
+                globalConfig,
+                'user',
+                data.user_name || globalConfig?.characterConfig?.yourName || '你',
+                data.content
+              );
+            }
+          } else {
+            console.log("忽略重复消息:", data.content);
           }
           break;
         case WindowMessageType.CONFIG_UPDATED:
@@ -171,6 +225,10 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
         isDetached: false,
         chatWindow: null
       });
+      // 移除全局窗口引用
+      if (window.chatWindow) {
+        window.chatWindow = null;
+      }
     } else {
       // 如果未分离，则打开新窗口，保持手机比例但允许调整大小
       const windowFeatures = 'width=390,height=700,resizable=yes,scrollbars=yes,status=no,location=no,toolbar=no,menubar=no';
@@ -180,6 +238,9 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
           isDetached: true,
           chatWindow: newWindow
         });
+        
+        // 设置全局窗口引用，方便其他组件访问
+        window.chatWindow = newWindow;
         
         // 窗口加载完成后主动同步数据
         const syncDataToNewWindow = () => {
@@ -214,6 +275,8 @@ export const WindowManagerProvider: React.FC<WindowManagerProviderProps> = ({
               isDetached: false,
               chatWindow: null
             });
+            // 清除全局窗口引用
+            window.chatWindow = null;
           }
         }, 500); // 每500ms检查一次窗口是否关闭
       }

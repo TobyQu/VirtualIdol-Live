@@ -11,8 +11,12 @@ import {
   PlayCircle, 
   PauseCircle,
 } from "lucide-react";
-import { getAssets } from "@/features/media/mediaApi";
+import { getAssets, fetchPublicAssets } from "@/features/media/mediaApi";
 import { showSuccess } from "@/lib/toast";
+import {
+  useAnimationStore,
+  AnimationCategory
+} from "@/features/animation/animationStore";
 
 // 动作类型定义
 type AnimationCategory = 'daily' | 'emote' | 'dance' | 'root';
@@ -57,18 +61,25 @@ export function AnimationSettings() {
   const { viewer } = useContext(ViewerContext);
   const [isPlaying, setIsPlaying] = useState(false);
   const [animationsLoaded, setAnimationsLoaded] = useState(false);
+  const [isDailyLoading, setIsDailyLoading] = useState(false);
+  const [dailyFiles, setDailyFiles] = useState<AnimationFile[]>([]);
+  const [isEmoteLoading, setIsEmoteLoading] = useState(false);
+  const [emoteFiles, setEmoteFiles] = useState<AnimationFile[]>([]);
+  const [isDanceLoading, setIsDanceLoading] = useState(false);
+  const [danceFiles, setDanceFiles] = useState<AnimationFile[]>([]);
 
   // 加载动画资源
   useEffect(() => {
     const loadAnimations = async () => {
       try {
-        const data = await getAssets();
+        const data = await fetchPublicAssets();
         
         // 将动画文件处理为更易于使用的格式
         const processedAnimations: AnimationFile[] = [];
         
-        // 处理根目录的动画
-        if (data.animation) {
+        // 获取所有资产，解析动画
+        if (data && data.animation) {
+          // 处理根目录的动画
           data.animation
             .filter(file => file.size > 0)
             .forEach(file => {
@@ -85,7 +96,7 @@ export function AnimationSettings() {
         
         // 获取daily目录下的动画
         try {
-          const dailyData = await fetch('/api/list-animations?dir=daily');
+          const dailyData = await fetch('/api/v1/assets/animation?dir=daily');
           const dailyAnimations = await dailyData.json();
           
           if (dailyAnimations && dailyAnimations.length > 0) {
@@ -108,7 +119,7 @@ export function AnimationSettings() {
         
         // 获取emote目录下的动画
         try {
-          const emoteData = await fetch('/api/list-animations?dir=emote');
+          const emoteData = await fetch('/api/v1/assets/animation?dir=emote');
           const emoteAnimations = await emoteData.json();
           
           if (emoteAnimations && emoteAnimations.length > 0) {
@@ -131,7 +142,7 @@ export function AnimationSettings() {
         
         // 获取dance目录下的动画
         try {
-          const danceData = await fetch('/api/list-animations?dir=dance');
+          const danceData = await fetch('/api/v1/assets/animation?dir=dance');
           const danceAnimations = await danceData.json();
           
           if (danceAnimations && danceAnimations.length > 0) {

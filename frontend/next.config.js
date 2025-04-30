@@ -15,7 +15,21 @@ const nextConfig = {
     
     return config;
   },
-  // 不再需要重写规则，因为使用标准的public目录
+  // 添加重写规则，确保特定API路径不会被重定向
+  async rewrites() {
+    return [
+      { 
+        source: '/api/v1/chat/stream',
+        destination: '/api/v1/chat/stream',
+        has: [{ type: 'header', key: 'Content-Type', value: 'application/json' }]
+      },
+      { 
+        source: '/api/v1/speech/tts/stream',
+        destination: '/api/v1/speech/tts/stream',
+        has: [{ type: 'header', key: 'Content-Type', value: 'application/json' }]
+      }
+    ];
+  }
 };
 
 module.exports = nextConfig;

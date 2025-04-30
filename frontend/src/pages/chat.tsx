@@ -34,6 +34,7 @@ export default function ChatPage() {
     handleCloseWindow,
     setSystemPrompt,
     setKoeiroParam,
+    setChatProcessing,
   } = useDetachedWindow();
 
   // 阻止关闭窗口（除非明确允许）
@@ -179,12 +180,20 @@ export default function ChatPage() {
                   chatLog={chatLog}
                   isChatProcessing={chatProcessing}
                   onChatProcessStart={(config, type, user_name, content) => {
+                    // 如果当前正在处理聊天，则不允许再次发送
+                    if (chatProcessing) {
+                      console.log("忽略重复发送，当前已有处理中的消息");
+                      return Promise.resolve();
+                    }
+                    // 设置处理状态并发送消息
+                    setChatProcessing(true);
                     sendChatMessage(content, user_name);
                     return Promise.resolve();
                   }}
                   globalConfig={globalConfig}
                   isDetachedWindow={true}
                   onResetChat={handleResetChatLog}
+                  onChatStateUpdate={(isProcessing) => setChatProcessing(isProcessing)}
                 />
               </TabsContent>
               <TabsContent value="action" className="flex-1 overflow-auto p-4 mt-0">

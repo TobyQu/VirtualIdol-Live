@@ -177,7 +177,7 @@ export const initialFormData = {
 
 export async function getConfig() {
     try {
-        const chatRes = await getRequest("/chatbot/config/get", {});
+        const chatRes = await getRequest("/api/v1/chatbot/config/get", {});
         if (chatRes.code !== 0) {
             throw new Error(chatRes.message || "Failed to get config");
         }
@@ -219,13 +219,13 @@ export async function saveConfig(config: GlobalConfig) {
     };
 
     try {
-        const chatRes = await postRequest("/chatbot/config/save", headers, config);
+        const chatRes = await postRequest("/api/v1/chatbot/config/save", headers, config);
         if (chatRes.code !== 0) {
             console.error("Save config failed:", chatRes);
             throw new Error(chatRes.message || "Failed to save config");
         }
         console.log("Config saved successfully:", chatRes);
-        return chatRes.response;
+        return chatRes.data?.success || false;
     } catch (error) {
         console.error("Error saving config:", error);
         throw error;

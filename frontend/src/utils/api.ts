@@ -28,9 +28,9 @@ export default axiosInstance;
 export const API_ENDPOINTS = {
   // 聊天相关
   CHAT: {
-    SEND_MESSAGE: '/chatbot/chat',
-    GET_HISTORY: '/chatbot/history',
-    CLEAR_HISTORY: '/chatbot/clear',
+    SEND_MESSAGE: '/api/v1/chat',
+    GET_HISTORY: '/api/v1/chat/history',
+    CLEAR_HISTORY: '/api/v1/chat/clear',
   },
   // 语音相关
   SPEECH: {

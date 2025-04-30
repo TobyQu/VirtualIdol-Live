@@ -3,6 +3,8 @@ import type { AppProps } from "next/app";
 import "@charcoal-ui/icons";
 import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
+import BackendStatus from '../components/BackendStatus';
+
 
 // 在服务器端渲染时抑制 useLayoutEffect 警告
 function suppressLayoutEffectWarning() {
@@ -27,6 +29,8 @@ export default function App({ Component, pageProps }: AppProps) {
 
   return (
     <>
+      
+      <BackendStatus />
       <Component {...pageProps} />
       <Toaster />
     </>

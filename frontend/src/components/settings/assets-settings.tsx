@@ -5,7 +5,18 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ViewerContext } from "@/features/vrmViewer/viewerContext"
-import { getAssets, AssetFile, AssetCategory, uploadBackground, uploadVrmModel, queryBackground, queryUserVrmModels, generateMediaUrl, saveAsset, deleteAsset } from "@/features/media/mediaApi"
+import {
+  fetchPublicAssets,
+  AssetFile,
+  AssetCategory,
+  uploadBackground,
+  uploadVrmModel,
+  queryBackground,
+  queryUserVrmModels,
+  generateMediaUrl,
+  saveAsset,
+  deleteAsset
+} from "@/features/media/mediaApi"
 import { GlobalConfig } from "@/features/config/configApi"
 import { UseFormReturn } from "react-hook-form"
 import { Trash2, Upload, User2 } from "lucide-react"
@@ -35,44 +46,17 @@ export function AssetsSettings({
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
   const { viewer } = useContext(ViewerContext)
 
-  // 加载资产并设置初始选中状态
-  const loadAssets = async () => {
+  const fetchAssets = async () => {
     try {
-      const data = await getAssets();
-      
-      // 过滤掉大小为0的文件
-      const filteredData = {
-        vrm: data.vrm.filter((file: AssetFile) => file.size > 0),
-        background: data.background.filter((file: AssetFile) => file.size > 0),
-        animation: data.animation.filter((file: AssetFile) => file.size > 0)
-      }
-
-      setAssets(filteredData)
-      
-      // 尝试从form获取值，如果没有则从globalConfig获取
-      const formVrmModel = form.getValues("vrmModel");
-      const formBackgroundUrl = form.getValues("backgroundUrl");
-      
-      // 如果有设置的VRM模型，则选择它
-      const vrmPath = formVrmModel || globalConfig?.characterConfig?.vrmModel || ""
-      if (vrmPath && filteredData.vrm.some((v: AssetFile) => v.path === vrmPath)) {
-        setSelectedVrmFile(vrmPath)
-        form.setValue("vrmModel", vrmPath, { shouldDirty: false });
-      }
-      
-      // 如果有设置的背景图片，则选择它
-      const bgPath = formBackgroundUrl || globalConfig?.background_url || ""
-      if (bgPath && filteredData.background.some((b: AssetFile) => b.path === bgPath)) {
-        setSelectedBackgroundFile(bgPath)
-        form.setValue("backgroundUrl", bgPath, { shouldDirty: false });
-      }
+      const data = await fetchPublicAssets();
+      setAssets(data);
     } catch (error) {
       console.error("加载资产出错:", error);
     }
   };
 
   useEffect(() => {
-    loadAssets();
+    fetchAssets();
   }, [globalConfig, form]);
   
   // 监听form字段变化并同步到组件状态
@@ -159,13 +143,8 @@ export function AssetsSettings({
             await uploadVrmModel(formData);
             
             // 刷新资产列表
-            const assetData = await getAssets();
-            const filteredData = {
-              vrm: assetData.vrm.filter((file: AssetFile) => file.size > 0),
-              background: assetData.background.filter((file: AssetFile) => file.size > 0),
-              animation: assetData.animation.filter((file: AssetFile) => file.size > 0)
-            };
-            setAssets(filteredData);
+            const assetData = await fetchPublicAssets();
+            setAssets(assetData);
             
             // 显示成功消息
             showSuccess("VRM模型上传成功，可从列表中选择应用");
@@ -206,13 +185,8 @@ export function AssetsSettings({
             await uploadBackground(formData);
             
             // 刷新资产列表
-            const assetData = await getAssets();
-            const filteredData = {
-              vrm: assetData.vrm.filter((file: AssetFile) => file.size > 0),
-              background: assetData.background.filter((file: AssetFile) => file.size > 0),
-              animation: assetData.animation.filter((file: AssetFile) => file.size > 0)
-            };
-            setAssets(filteredData);
+            const assetData = await fetchPublicAssets();
+            setAssets(assetData);
             
             // 显示成功消息
             showSuccess("背景图片上传成功，可从列表中选择应用");
@@ -259,13 +233,8 @@ export function AssetsSettings({
       await deleteAsset(filePath, 'vrm');
       
       // 刷新资产列表
-      const assetData = await getAssets();
-      const filteredData = {
-        vrm: assetData.vrm.filter((file: AssetFile) => file.size > 0),
-        background: assetData.background.filter((file: AssetFile) => file.size > 0),
-        animation: assetData.animation.filter((file: AssetFile) => file.size > 0)
-      };
-      setAssets(filteredData);
+      const assetData = await fetchPublicAssets();
+      setAssets(assetData);
       
       showSuccess("模型已成功删除");
     } catch (error) {
@@ -288,13 +257,8 @@ export function AssetsSettings({
       await deleteAsset(filePath, 'backgrounds');
       
       // 刷新资产列表
-      const assetData = await getAssets();
-      const filteredData = {
-        vrm: assetData.vrm.filter((file: AssetFile) => file.size > 0),
-        background: assetData.background.filter((file: AssetFile) => file.size > 0),
-        animation: assetData.animation.filter((file: AssetFile) => file.size > 0)
-      };
-      setAssets(filteredData);
+      const assetData = await fetchPublicAssets();
+      setAssets(assetData);
       
       showSuccess("背景图片已成功删除");
     } catch (error) {

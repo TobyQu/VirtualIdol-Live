@@ -27,6 +27,27 @@ export function useDetachedWindow() {
 
   // 发送聊天消息到主窗口
   const sendChatMessage = (content: string, user_name: string) => {
+    if (!content || !content.trim()) return;
+    
+    // 通过消息缓存防止重复发送
+    const messageKey = `${content}_${user_name}_${Date.now()}`;
+    
+    // 检查是否有相同内容的消息最近发送过
+    if (window.localStorage.getItem('lastSentMessage') === content) {
+      const lastSentTime = parseInt(window.localStorage.getItem('lastSentTime') || '0');
+      const currentTime = Date.now();
+      
+      // 如果同一消息在2秒内重复发送，则忽略
+      if (currentTime - lastSentTime < 2000) {
+        console.log("忽略重复发送的消息");
+        return;
+      }
+    }
+    
+    // 记录最近发送的消息
+    window.localStorage.setItem('lastSentMessage', content);
+    window.localStorage.setItem('lastSentTime', Date.now().toString());
+    
     // 先在本地显示消息
     const updatedChatLog: Message[] = [
       ...chatLog,
@@ -40,7 +61,8 @@ export function useDetachedWindow() {
         type: WindowMessageType.CHAT_MESSAGE,
         content,
         user_name,
-        chatLog: updatedChatLog
+        chatLog: updatedChatLog,
+        messageKey // 添加消息唯一标识
       }, '*');
     }
   };

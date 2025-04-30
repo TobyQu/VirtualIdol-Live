@@ -1,5 +1,5 @@
 import { buildUrl } from "@/utils/buildUrl";
-import { getRequest, postRequest, buildMediaUrl } from "../httpclient/httpclient";
+import { getRequest, postRequest, getFullApiUrl } from "../httpclient/httpclient";
 import axios from 'axios';
 import { EmotionType } from "../messages/messages";
 
@@ -10,7 +10,7 @@ export const voiceData = {
 export type Voice = typeof voiceData;
 
 /**
- * 获取语音列表（仅Minimax）
+ * 获取语音列表（Minimax）
  * @returns 语音列表
  */
 export async function getVoices() {
@@ -21,7 +21,7 @@ export async function getVoices() {
     const body = { "type": "minimax" };
 
     try {
-        const chatRes = await postRequest("/api/speech/tts/voices/", headers, body);
+        const chatRes = await postRequest("/api/v1/speech/tts/voices/", headers, body);
         if (chatRes.code !== '200') {
             throw new Error(`获取语音列表失败: ${chatRes.message || '未知错误'}`);
         }
@@ -52,7 +52,7 @@ export async function generateAudio(text: string, voice_id: string, emotion: str
     };
 
     try {
-        const response = await postRequest("/api/speech/tts/generate/", headers, body);
+        const response = await postRequest("/api/v1/speech/tts/generate/", headers, body);
         if (response.code !== '200') {
             throw new Error(`生成语音失败: ${response.message || '未知错误'}`);
         }
@@ -88,24 +88,11 @@ export async function generateAudioStream(text: string, voice_id: string, emotio
     try {
         console.log(`请求流式TTS - 文本: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}, 声音ID: ${voice_id}, 情绪: ${emotion}`);
         
-        // 获取环境变量，确保URL正确
-        const environment = process.env.NODE_ENV;
-        let baseUrl = "";
+        // 使用完整的API路径
+        const apiUrl = "/api/v1/speech/tts/stream/";
+        console.log(`发送流式TTS请求到: ${apiUrl}`);
         
-        if (environment === "development") {
-            baseUrl = "http://localhost:8000";
-        } else if (environment === "production") {
-            baseUrl = "/api/chatbot";
-        } else {
-            console.warn("未知环境变量，使用默认值");
-            baseUrl = "http://localhost:8000";
-        }
-        
-        // 确保使用完整的URL地址
-        const fullUrl = `${baseUrl}/api/speech/tts/stream/`;
-        console.log(`发送流式TTS请求到: ${fullUrl}`);
-        
-        const response = await axios.post(fullUrl, body, {
+        const response = await axios.post(apiUrl, body, {
             headers: headers,
             responseType: 'arraybuffer',  // 直接请求二进制数据
             timeout: 30000
@@ -170,6 +157,50 @@ export async function generateAudioStream(text: string, voice_id: string, emotio
  * 获取可用的情绪类型
  * @returns 情绪类型列表
  */
-export function getEmotions() {
-    return Object.values(EmotionType);
+export async function getEmotions() {
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+    };
+
+    try {
+        const response = await getRequest("/api/v1/speech/tts/emotions/", headers);
+        if (response.code !== '200') {
+            throw new Error(`获取情绪列表失败: ${response.message || '未知错误'}`);
+        }
+        return response.response.emotions || [];
+    } catch (error) {
+        console.error("获取情绪列表出错:", error);
+        // 如果API调用失败，返回本地定义的情绪类型
+        return Object.values(EmotionType);
+    }
+}
+
+/**
+ * 翻译文本
+ * @param text 要翻译的文本
+ * @param source_lang 源语言，默认自动检测
+ * @param target_lang 目标语言，默认中文
+ * @returns 翻译后的文本
+ */
+export async function translateText(text: string, source_lang: string = 'auto', target_lang: string = 'zh') {
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json"
+    };
+
+    const body = {
+        "text": text,
+        "source_lang": source_lang,
+        "target_lang": target_lang
+    };
+
+    try {
+        const response = await postRequest("/api/v1/speech/translation/", headers, body);
+        if (response.code !== '200') {
+            throw new Error(`翻译文本失败: ${response.message || '未知错误'}`);
+        }
+        return response.response.translated_text;
+    } catch (error) {
+        console.error("翻译文本出错:", error);
+        throw error;
+    }
 }

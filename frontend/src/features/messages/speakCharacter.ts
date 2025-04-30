@@ -4,22 +4,12 @@ import { Viewer } from "../vrmViewer/viewer";
 import { Screenplay } from "./messages";
 import { Talk } from "./messages";
 import axios from 'axios';
-import { postRequestArraybuffer } from "../httpclient/httpclient";
+import { postRequestArraybuffer, getFullApiUrl } from "../httpclient/httpclient";
 import { GlobalConfig } from "../config/configApi";
 import { generateAudioStream } from "../tts/ttsApi";
 
-// 获取环境变量
-const environment = process.env.NODE_ENV;
-// 定义基础URL
-let baseUrl = "";
-if (environment === "development") {
-  baseUrl = "http://localhost:8000";
-} else if (environment === "production") {
-  baseUrl = "/api/chatbot";
-} else {
-  console.warn("未知环境变量，使用默认值");
-  baseUrl = "http://localhost:8000";
-}
+// 直接使用相对路径，由 NextJS 处理
+const apiBasePath = '/api';
 
 const createSpeakCharacter = () => {
   let lastTime = 0;
@@ -129,8 +119,11 @@ const fallbackToNonStreamAPI = async (talk: Talk, globalConfig: GlobalConfig): P
   try {
     console.log(`尝试使用非流式API - 文本: ${talk.message.substring(0, 50)}${talk.message.length > 50 ? '...' : ''}, 情绪: ${emotion}`);
     
+    // 使用正确的API路径
+    const ttsEndpoint = '/api/v1/speech/tts/generate/';
+    
     // 直接使用axios
-    const response = await axios.post(`${baseUrl}/api/speech/tts/generate/`, requestBody, {
+    const response = await axios.post(ttsEndpoint, requestBody, {
       responseType: 'arraybuffer',
       headers: headers,
       timeout: 30000

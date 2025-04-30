@@ -1,5 +1,5 @@
 import { buildUrl } from "@/utils/buildUrl";
-import { getRequest, postRequest, buildMediaUrl } from "../httpclient/httpclient";
+import { getRequest, postRequest } from "../httpclient/httpclient";
 
 
 export const backgroundModelData = {
@@ -19,10 +19,11 @@ export type VrmModel = typeof vrmModelData;
 
 // 添加接口定义
 export interface AssetFile {
-  thumbnail: any;
   name: string;
   path: string;
   size: number;
+  type?: string;
+  thumbnail?: string;  // 添加可选的缩略图属性
 }
 
 export interface AssetCategory {
@@ -31,16 +32,24 @@ export interface AssetCategory {
   animation: AssetFile[];
 }
 
-// 获取assets目录下的资源文件
-export async function getAssets(): Promise<AssetCategory> {
+export interface SaveAssetResult {
+  success: boolean;
+  assetUrl: string;
+  fileName: string;
+}
+
+// 获取公共资产
+export async function fetchPublicAssets(): Promise<AssetCategory> {
   try {
-    const response = await fetch('/api/public-assets');
+    const response = await fetch('/api/v1/assets');
+    
     if (!response.ok) {
-      throw new Error('Failed to fetch assets');
+      throw new Error(`获取资产失败: ${response.status}`);
     }
+    
     return await response.json();
   } catch (error) {
-    console.error('Error fetching assets:', error);
+    console.error('获取资产失败:', error);
     return {
       vrm: [],
       background: [],
@@ -53,11 +62,14 @@ export async function deleteBackground(id: number) {
     const headers: Record<string, string> = {
         "Content-Type": "application/json"
     };
-    const chatRes = await postRequest(`/chatbot/config/background/delete/${id}`, headers, {});
-    if (chatRes.code !== '200') {
-        throw new Error("Something went wrong");
+    
+    try {
+        // 使用新的API删除背景
+        return await deleteAsset(`${id}`, 'backgrounds');
+    } catch (error) {
+        console.error("删除背景图片错误:", error);
+        throw error;
     }
-    return chatRes.response;
 }
 
 export async function uploadBackground(formData: FormData) {
@@ -89,76 +101,22 @@ export async function uploadBackground(formData: FormData) {
         }
         
         try {
-            // 引入axios
-            const axios = await import('axios');
-            const baseUrl = process.env.NODE_ENV === "development" ? "http://localhost:8000" : "/api/chatbot";
-            const url = `${baseUrl}/chatbot/config/background/upload/`;
-            
-            console.log(`发送请求到: ${url}`);
-            
-            // 创建新的FormData对象（有时可以解决一些格式问题）
-            const newFormData = new FormData();
+            // 使用新的API上传背景
             const file = formData.get('image') as File;
+            const newFormData = new FormData();
+            newFormData.append('file', file);
             
-            // 确保文件名符合后端要求（不要太长）
-            // 后端模型限制了original_name字段长度为50
-            const fileName = file.name.length > 45 ? 
-                file.name.substring(0, 45) + ".jpg" : 
-                file.name;
+            const result = await saveAsset(file, 'backgrounds');
+            console.log("上传背景图片响应:", result);
             
-            // 使用短文件名添加到FormData
-            newFormData.append('image', file, fileName);
+            // 刷新assets列表
+            const assetData = await fetchPublicAssets();
+            console.log("刷新assets列表:", assetData);
             
-            // 调试FormData内容
-            console.log("FormData详情:");
-            for (const pair of newFormData.entries()) {
-                console.log(`${pair[0]}: ${pair[1] instanceof File ? 
-                  `${(pair[1] as File).name} (${(pair[1] as File).size} bytes)` : pair[1]}`);
-            }
-            
-            // 确保不设置Content-Type，让浏览器自动添加boundary
-            const response = await axios.default.post(url, newFormData, {
-                headers: {},
-                withCredentials: true
-            });
-            
-            console.log("上传背景图片响应:", response.data);
-            
-            // 检查响应状态
-            if (response.data && response.data.code === '200') {
-                console.log("上传成功，刷新背景列表");
-                
-                // 等待一小段时间，确保服务器处理完毕
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                // 刷新背景列表
-                const backgroundList = await queryBackground();
-                console.log("获取到新的背景列表:", backgroundList);
-                
-                // 确保背景图片有完整的URL
-                const mediaUrl = backgroundList && backgroundList.length > 0 ? 
-                    generateMediaUrl(backgroundList[backgroundList.length - 1].image) : '';
-                    
-                console.log("生成的媒体URL:", mediaUrl);
-                
-                // 刷新assets列表
-                const assetData = await getAssets();
-                console.log("刷新assets列表:", assetData);
-                
-                return response.data.response;
-            } else {
-                console.error("上传失败:", response.data);
-                throw new Error(`上传失败: ${JSON.stringify(response.data)}`);
-            }
-        } catch (axiosError: any) {
-            console.error("请求错误:", axiosError);
-            if (axiosError.response) {
-                console.error("服务器响应状态:", axiosError.response.status);
-                console.error("服务器响应数据:", axiosError.response.data);
-                throw new Error(`服务器错误: ${axiosError.response.status} - ${JSON.stringify(axiosError.response.data)}`);
-            } else {
-                throw axiosError;
-            }
+            return result;
+        } catch (error) {
+            console.error("上传背景错误:", error);
+            throw error;
         }
     } catch (error) {
         console.error("上传背景错误:", error);
@@ -167,25 +125,29 @@ export async function uploadBackground(formData: FormData) {
 }
 
 export async function queryBackground() {
-    const headers: Record<string, string> = {
-        "Content-Type": "application/json"
-    };
-    const chatRes = await getRequest("/chatbot/config/background/show", headers);
-    if (chatRes.code !== '200') {
-        throw new Error("Something went wrong");
+    try {
+        // 使用新的API获取背景列表
+        const assets = await fetchPublicAssets();
+        // 转换为旧格式，保持兼容性
+        return assets.background.map((item, index) => ({
+            id: index,
+            original_name: item.name,
+            image: item.path
+        }));
+    } catch (error) {
+        console.error("获取背景列表错误:", error);
+        throw error;
     }
-    return chatRes.response;
 }
 
 export async function deleteVrmModel(id: number) {
-    const headers: Record<string, string> = {
-        "Content-Type": "application/json"
-    };
-    const chatRes = await postRequest(`/chatbot/config/vrm/delete/${id}`, headers, {});
-    if (chatRes.code !== '200') {
-        throw new Error("Something went wrong");
+    try {
+        // 使用新的API删除VRM模型
+        return await deleteAsset(`${id}`, 'vrm');
+    } catch (error) {
+        console.error("删除VRM模型错误:", error);
+        throw error;
     }
-    return chatRes.response;
 }
 
 export async function uploadVrmModel(formData: FormData) {
@@ -212,58 +174,19 @@ export async function uploadVrmModel(formData: FormData) {
         }
         
         try {
-            // 引入axios
-            const axios = await import('axios');
-            const baseUrl = process.env.NODE_ENV === "development" ? "http://localhost:8000" : "/api/chatbot";
-            const url = `${baseUrl}/chatbot/config/vrm/upload/`;
+            // 使用新的API上传VRM模型
+            const file = formData.get('vrm') as File;
+            const result = await saveAsset(file, 'vrm');
+            console.log("上传VRM模型响应:", result);
             
-            console.log(`发送请求到: ${url}`);
+            // 刷新assets列表
+            const assetData = await fetchPublicAssets();
+            console.log("刷新assets列表:", assetData);
             
-            // 调试FormData内容
-            console.log("FormData详情:");
-            for (const pair of formData.entries()) {
-                console.log(`${pair[0]}: ${pair[1] instanceof File ? 
-                  `${(pair[1] as File).name} (${(pair[1] as File).size} bytes)` : pair[1]}`);
-            }
-            
-            // 确保不设置Content-Type，让浏览器自动添加boundary
-            const response = await axios.default.post(url, formData, {
-                headers: {},
-                // 添加withCredentials支持跨域Cookie
-                withCredentials: true
-            });
-            
-            console.log("上传VRM模型响应:", response.data);
-            
-            // 检查响应状态
-            if (response.data && response.data.code === '200') {
-                console.log("上传成功，刷新VRM模型列表");
-                
-                // 等待一小段时间，确保服务器处理完毕
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                // 刷新VRM模型列表
-                const vrmList = await queryUserVrmModels();
-                console.log("获取到新的VRM模型列表:", vrmList);
-                
-                // 刷新assets列表
-                const assetData = await getAssets();
-                console.log("刷新assets列表:", assetData);
-                
-                return response.data.response;
-            } else {
-                console.error("上传失败:", response.data);
-                throw new Error(`上传失败: ${JSON.stringify(response.data)}`);
-            }
-        } catch (axiosError: any) {
-            console.error("请求错误:", axiosError);
-            if (axiosError.response) {
-                console.error("服务器响应状态:", axiosError.response.status);
-                console.error("服务器响应数据:", axiosError.response.data);
-                throw new Error(`服务器错误: ${axiosError.response.status} - ${JSON.stringify(axiosError.response.data)}`);
-            } else {
-                throw axiosError;
-            }
+            return result;
+        } catch (error) {
+            console.error("上传VRM模型错误:", error);
+            throw error;
         }
     } catch (error) {
         console.error("上传VRM模型错误:", error);
@@ -275,7 +198,7 @@ export async function uploadRolePackage(formData: FormData) {
     const headers: Record<string, string> = {
         "Content-Type": "multipart/form-data"
     };
-    const chatRes = await postRequest("/chatbot/rolepackage/upload", headers, formData);
+    const chatRes = await postRequest("/api/v1/chatbot/rolepackage/upload", headers, formData);
     if (chatRes.code !== '200') {
         throw new Error("Something went wrong");
     }
@@ -283,25 +206,41 @@ export async function uploadRolePackage(formData: FormData) {
 }
 
 export async function queryUserVrmModels() {
-    const headers: Record<string, string> = {
-        "Content-Type": "application/json"
-    };
-    const chatRes = await getRequest("/chatbot/config/vrm/user/show", headers);
-    if (chatRes.code !== '200') {
-        throw new Error("Something went wrong");
+    try {
+        // 使用新的API获取用户VRM模型列表
+        const assets = await fetchPublicAssets();
+        // 过滤用户类型的VRM模型，转换为旧格式，保持兼容性
+        return assets.vrm
+            .filter(item => !item.name.toLowerCase().startsWith('default'))
+            .map((item, index) => ({
+                id: index,
+                type: "user",
+                original_name: item.name,
+                vrm: item.path
+            }));
+    } catch (error) {
+        console.error("获取用户VRM模型列表错误:", error);
+        throw error;
     }
-    return chatRes.response;
 }
 
 export async function querySystemVrmModels() {
-    const headers: Record<string, string> = {
-        "Content-Type": "application/json"
-    };
-    const chatRes = await getRequest("/chatbot/config/vrm/system/show", headers);
-    if (chatRes.code !== '200') {
-        throw new Error("Something went wrong");
+    try {
+        // 使用新的API获取系统VRM模型列表
+        const assets = await fetchPublicAssets();
+        // 过滤系统类型的VRM模型，转换为旧格式，保持兼容性
+        return assets.vrm
+            .filter(item => item.name.toLowerCase().startsWith('default'))
+            .map((item, index) => ({
+                id: index,
+                type: "system",
+                original_name: item.name,
+                vrm: item.path
+            }));
+    } catch (error) {
+        console.error("获取系统VRM模型列表错误:", error);
+        throw error;
     }
-    return chatRes.response;
 }
 
 
@@ -310,7 +249,13 @@ export function generateMediaUrl(url: string) {
   if (url.startsWith('/assets/')) {
     return url;
   }
-  return buildMediaUrl(url);
+  
+  // 如果不是以"/"开头，添加前缀
+  if (!url.startsWith('/')) {
+    return `/api/media/${url}`;
+  }
+  
+  return url;
 }
 
 export function buildVrmModelUrl(url: string, type: string) {
@@ -328,57 +273,87 @@ export function buildVrmModelUrl(url: string, type: string) {
   return vrm_url
 }
 
-// 将文件保存到前端资产目录
-export async function saveAsset(file: File, assetType: 'backgrounds' | 'vrm' | 'animations' = 'backgrounds'): Promise<string> {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('assetType', assetType);
-  
+// 保存资产文件
+export async function saveAsset(file: File, assetType: string, category?: string): Promise<SaveAssetResult> {
   try {
-    const response = await fetch('/api/save-asset', {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    if (category) {
+      formData.append('category', category);
+    }
+    
+    let endpoint = '';
+    switch(assetType) {
+      case 'backgrounds':
+        endpoint = '/api/v1/assets/background';
+        break;
+      case 'vrm':
+        endpoint = '/api/v1/assets/vrm';
+        break;
+      case 'animations':
+        endpoint = '/api/v1/assets/animation';
+        break;
+      default:
+        throw new Error('无效的资产类型');
+    }
+    
+    const response = await fetch(endpoint, {
       method: 'POST',
-      body: formData
+      body: formData,
     });
     
     if (!response.ok) {
-      throw new Error(`服务器返回错误: ${response.status}`);
+      const errorData = await response.json();
+      throw new Error(errorData.error || '上传失败');
     }
     
-    const data = await response.json();
-    if (!data.success) {
-      throw new Error(data.error || '保存资产失败');
-    }
-    
-    console.log('资产已保存到前端目录:', data.assetUrl);
-    return data.assetUrl;
+    return await response.json();
   } catch (error) {
-    console.error('保存资产失败:', error);
+    console.error('上传资产失败:', error);
     throw error;
   }
 }
 
-// 删除前端资产目录中的文件
-export async function deleteAsset(filePath: string, assetType: 'backgrounds' | 'vrm' | 'animations'): Promise<boolean> {
+// 删除资产文件
+export async function deleteAsset(fileName: string, assetType: string): Promise<boolean> {
   try {
-    // 从文件路径中提取文件名
-    const fileName = filePath.split('/').pop();
+    let endpoint = '';
+    let queryParams = `?filePath=${encodeURIComponent(fileName)}`;
     
-    if (!fileName) {
-      throw new Error('无效的文件路径');
+    switch(assetType) {
+      case 'backgrounds':
+        endpoint = '/api/v1/assets/background';
+        break;
+      case 'vrm':
+        endpoint = '/api/v1/assets/vrm';
+        break;
+      case 'animations':
+        // 对于动画，需要解析出类别
+        const parts = fileName.split('/');
+        if (parts.length >= 3) {
+          const category = parts[parts.length - 2]; // 获取路径中的类别
+          endpoint = '/api/v1/assets/animation';
+          queryParams += `&category=${category}`;
+        } else {
+          throw new Error('无效的动画文件路径');
+        }
+        break;
+      default:
+        throw new Error('无效的资产类型');
     }
     
-    const response = await fetch(`/api/delete-asset?filePath=${encodeURIComponent(fileName)}&assetType=${assetType}`, {
+    const response = await fetch(`${endpoint}${queryParams}`, {
       method: 'DELETE',
     });
     
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || '删除资产失败');
+      const errorData = await response.json();
+      throw new Error(errorData.error || '删除失败');
     }
     
-    const data = await response.json();
-    console.log('资产已从前端目录删除:', filePath);
-    return data.success;
+    const result = await response.json();
+    return result.success;
   } catch (error) {
     console.error('删除资产失败:', error);
     throw error;

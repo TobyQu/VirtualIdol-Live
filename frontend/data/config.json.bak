@@ -1,0 +1,72 @@
+{
+  "characterConfig": {
+    "character": 1,
+    "character_name": "芙琳娜",
+    "yourName": "老公",
+    "vrmModel": "/assets/vrm/Flinna.vrm",
+    "cameraDistance": 8.3
+  },
+  "languageModelConfig": {
+    "openai": {
+      "OPENAI_API_KEY": "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",
+      "OPENAI_BASE_URL": "https://service-etuut1fg-1255572206.usw.tencentapigw.com/v1"
+    },
+    "ollama": {
+      "OLLAMA_API_BASE": "http://localhost:11434",
+      "OLLAMA_API_MODEL_NAME": "qwen:7b"
+    },
+    "zhipuai": {
+      "ZHIPUAI_API_KEY": "SK-"
+    },
+    "qwen": {
+      "DASHSCOPE_API_KEY": "",
+      "QWEN_MODEL_NAME": "qwen-plus"
+    }
+  },
+  "enableProxy": false,
+  "httpProxy": "http://host.docker.internal:23457",
+  "httpsProxy": "https://host.docker.internal:23457",
+  "socks5Proxy": "socks5://host.docker.internal:23457",
+  "conversationConfig": {
+    "conversationType": "default",
+    "languageModel": "openai"
+  },
+  "memoryStorageConfig": {
+    "faissMemory": {
+      "dataDir": "storage/memory"
+    },
+    "enableLongMemory": false,
+    "enableSummary": false,
+    "languageModelForSummary": "openai",
+    "enableReflection": false,
+    "languageModelForReflection": "openai",
+    "local_memory_num": 5
+  },
+  "background_url": "/assets/backgrounds/blue.png",
+  "enableLive": false,
+  "liveStreamingConfig": {
+    "B_ROOM_ID": "",
+    "B_COOKIE": ""
+  },
+  "ttsConfig": {
+    "ttsVoiceId": "female-shaonv",
+    "emotion": "neutral",
+    "ttsType": "minimax",
+    "minimax": {
+      "apiKey": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJHcm91cE5hbWUiOiLnnr_mtpvmtpsiLCJVc2VyTmFtZSI6Iueev-a2m-a2myIsIkFjY291bnQiOiIiLCJTdWJqZWN0SUQiOiIxODgxOTQ5OTUwMDk1NDA5MTgzIiwiUGhvbmUiOiIxODY4ODYxMDk2NyIsIkdyb3VwSUQiOiIxODgxOTQ5OTUwMDg3MDIwNTc1IiwiUGFnZU5hbWUiOiIiLCJNYWlsIjoiIiwiQ3JlYXRlVGltZSI6IjIwMjUtMDMtMjggMTY6MTQ6NTgiLCJUb2tlblR5cGUiOjEsImlzcyI6Im1pbmltYXgifQ.ngsS-kyYf1vcm9BbI5jycylu8cJJSARmbJXBvhSyby0IfHy3a1_Hsz5I7HXSVtx86tMqH05qRyHQlMoLtvd0PN6KjR9ItZc45UtyM23tLKNOXB83Sxvlr_oDiQmbe2b0WO_mUB-a7MYiJF3Q5i146Ad6UR8_q7heKR7uS9gPs4fgu26sKW_ZB53Oq6oq35Eshsh6Qn97_aT1Ll2I50HIelZqDSjl4QLEKjzDZvdyQFvJKh93FqjZ5KIZL1zGHc9N3FIvwSXp38CYEqYrZRHd-AZclcQjb2QYsDM_ll7AfmxfXb3KhFI7bO9fV5HETsGRwyL73MKZ3m9YXZ5sVFhOzQ",
+      "groupId": "1881949950087020575",
+      "model": "speech-02-turbo"
+    }
+  },
+  "emotionConfig": {
+    "enabled": false,
+    "sensitivity": 0.5,
+    "changeSpeed": 0.5,
+    "defaultEmotion": "neutral",
+    "expressionIntensity": 0.7
+  },
+  "koeiroParam": {
+    "speakerX": 1.32,
+    "speakerY": 1.88
+  }
+}

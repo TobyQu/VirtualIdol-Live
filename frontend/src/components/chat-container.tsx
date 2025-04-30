@@ -6,7 +6,14 @@ import { GlobalConfig } from "@/features/config/configApi"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { MessageCircle, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { EmotionIndicator } from './EmotionIndicator'
+import { WindowMessageType } from "@/features/windowManager/types"
+
+// 为Window对象添加chatWindow属性的声明
+declare global {
+  interface Window {
+    chatWindow?: Window | null;
+  }
+}
 
 interface ChatContainerProps {
   chatLog: Message[]
@@ -15,6 +22,7 @@ interface ChatContainerProps {
   globalConfig: GlobalConfig
   isDetachedWindow?: boolean
   onResetChat?: () => void
+  onChatStateUpdate?: (isProcessing: boolean) => void
 }
 
 export function ChatContainer({
@@ -23,7 +31,8 @@ export function ChatContainer({
   onChatProcessStart,
   globalConfig,
   isDetachedWindow = false,
-  onResetChat
+  onResetChat,
+  onChatStateUpdate
 }: ChatContainerProps) {
   const [isMicRecording, setIsMicRecording] = useState(false)
   const [userMessage, setUserMessage] = useState("")
@@ -87,10 +96,54 @@ export function ChatContainer({
 
   const characterName = globalConfig?.characterConfig?.character_name || "虚拟角色";
 
-  // 记录加载状态的变化，用于调试
+  // 记录加载状态的变化，用于调试并同步到其他窗口
   useEffect(() => {
     console.log("Chat processing state:", isChatProcessing);
-  }, [isChatProcessing]);
+    
+    // 如果是主窗口，同步处理状态到分离窗口
+    if (!isDetachedWindow) {
+      // 获取可能的分离窗口
+      const chatWindows: Window[] = [];
+      
+      // 尝试安全地访问window.chatWindow
+      try {
+        if (window.chatWindow && !window.chatWindow.closed) {
+          chatWindows.push(window.chatWindow);
+        }
+      } catch (e) {
+        console.warn("访问chatWindow时出错:", e);
+      }
+      
+      // 向所有相关窗口广播当前处理状态
+      for (const win of chatWindows) {
+        if (win && !win.closed) {
+          try {
+            win.postMessage({
+              type: WindowMessageType.CHAT_PROCESSING_STATE,
+              isProcessing: isChatProcessing
+            }, '*');
+          } catch (e) {
+            console.error("同步处理状态失败", e);
+          }
+        }
+      }
+    }
+  }, [isChatProcessing, isDetachedWindow]);
+
+  // 监听来自主窗口的处理状态同步消息
+  useEffect(() => {
+    if (!isDetachedWindow) return; // 只在分离窗口中监听
+    
+    const handleWindowMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === WindowMessageType.CHAT_PROCESSING_STATE) {
+        // 使用回调函数更新分离窗口的处理状态
+        onChatStateUpdate?.(event.data.isProcessing);
+      }
+    };
+    
+    window.addEventListener('message', handleWindowMessage);
+    return () => window.removeEventListener('message', handleWindowMessage);
+  }, [isDetachedWindow]);
 
   const handleResetChat = useCallback(() => {
     if (onResetChat) {
