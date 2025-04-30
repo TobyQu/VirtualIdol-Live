@@ -5,19 +5,10 @@ import {SYSTEM_PROMPT} from "@/features/constants/systemPromptConstants";
 import {DEFAULT_PARAM, KoeiroParam} from "@/features/constants/koeiroParam";
 import {GlobalConfig, getConfig, initialFormData} from "@/features/config/configApi";
 import {generateMediaUrl} from "@/features/media/mediaApi";
-import {Introduction} from "@/components/introduction";
-import {Meta} from "@/components/meta";
-import {AppContent, AppContentProps} from "@/components/app-content";
-import {WindowManagerProvider} from "@/features/windowManager/windowContext";
+import {Introduction} from "@/components/core/introduction";
+import {Meta} from "@/components/core/meta";
+import {AppContent, AppContentProps} from "@/components/core/app-content";
 import {CharacterResponseService} from "@/features/character/characterResponseService";
-
-// 为Window对象添加isClosingAllowed属性
-declare global {
-  interface Window {
-    isClosingAllowed: boolean;
-    _closeOverridden?: boolean;
-  }
-}
 
 // 扩展GlobalConfig类型添加koeiroParam
 interface ExtendedGlobalConfig extends GlobalConfig {
@@ -241,18 +232,13 @@ export default function Home() {
             setChatProcessing(true);
 
             const yourName = user_name == null || user_name == '' ? globalConfig?.characterConfig?.yourName : user_name;
-            // 添加用户消息到聊天记录
-            const messageLog: Message[] = [
-                ...chatLog,
-                {role: "user", content: content, user_name: yourName},
-            ];
-            setChatLog(messageLog);
-
+            // 不再在这里添加用户消息到聊天记录，而是通过ChatService处理
+            
             try {
                 // 获取ChatService实例
                 const chatService = await getChatService();
                 // 执行聊天请求
-                await chatService.handleSendChat(globalConfig, content, messageLog);
+                await chatService.handleSendChat(globalConfig, content, chatLog);
             } catch (error) {
                 console.error("Chat error:", error);
                 setChatProcessing(false);
@@ -287,39 +273,31 @@ export default function Home() {
 
     return (
         <div className="h-screen flex flex-col items-center justify-center">
-            <WindowManagerProvider
-                onChatProcessStart={handleSendChat}
-                chatLog={chatLog}
-                setChatLog={setChatLog}
+            <AppContent 
+                isClient={isClient}
+                isLoading={isLoading}
+                loadingStages={loadingStages}
+                handleLoadingStateChange={handleLoadingStateChange}
                 globalConfig={globalConfig}
-                setGlobalConfig={setGlobalConfig}
-            >
-                <AppContent 
-                    isClient={isClient}
-                    isLoading={isLoading}
-                    loadingStages={loadingStages}
-                    handleLoadingStateChange={handleLoadingStateChange}
-                    globalConfig={globalConfig}
-                    backgroundImageUrl={backgroundImageUrl}
-                    subtitle={subtitle}
-                    currentEmote={currentEmote}
-                    typingDelay={typingDelay}
-                    openAiKey={openAiKey}
-                    setOpenAiKey={setOpenAiKey}
-                    systemPrompt={systemPrompt}
-                    setSystemPrompt={setSystemPrompt}
-                    chatLog={chatLog}
-                    koeiroParam={koeiroParam}
-                    assistantMessage={assistantMessage}
-                    handleChangeChatLog={handleChangeChatLog}
-                    setKoeiroParam={setKoeiroParam}
-                    onChangeGlobalConfig={onChangeGlobalConfig}
-                    chatProcessing={chatProcessing}
-                    handleSendChat={handleSendChat}
-                    setBackgroundImageUrl={handleSetBackgroundImageUrl}
-                    setChatLog={handleResetChatLog}
-                />
-            </WindowManagerProvider>
+                backgroundImageUrl={backgroundImageUrl}
+                subtitle={subtitle}
+                currentEmote={currentEmote}
+                typingDelay={typingDelay}
+                openAiKey={openAiKey}
+                setOpenAiKey={setOpenAiKey}
+                systemPrompt={systemPrompt}
+                setSystemPrompt={setSystemPrompt}
+                chatLog={chatLog}
+                koeiroParam={koeiroParam}
+                assistantMessage={assistantMessage}
+                handleChangeChatLog={handleChangeChatLog}
+                setKoeiroParam={setKoeiroParam}
+                onChangeGlobalConfig={onChangeGlobalConfig}
+                chatProcessing={chatProcessing}
+                handleSendChat={handleSendChat}
+                setBackgroundImageUrl={handleSetBackgroundImageUrl}
+                setChatLog={handleResetChatLog}
+            />
             <Meta/>
             <Introduction openAiKey={openAiKey} onChangeAiKey={setOpenAiKey}/>
         </div>

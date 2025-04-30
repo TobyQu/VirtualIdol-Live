@@ -68,8 +68,8 @@ export function getSystemConfig(): SystemConfig | null {
 // 从请求中提取聊天参数
 export function extractChatParams(req: NextApiRequest) {
   try {
-    const { query, you_name, user_id = 1, role_id = 1 } = req.body;
-    return { query, you_name, user_id, role_id };
+    const { query, you_name, user_id = 1, role_id = 1, chat_history = [] } = req.body;
+    return { query, you_name, user_id, role_id, chat_history };
   } catch (error) {
     throw new Error('提取聊天参数失败');
   }
@@ -95,19 +95,45 @@ ${characterName}:`;
 }
 
 // 用于生成基本的OpenAI消息格式
-export function buildChatMessages(query: string, youName: string, characterName: string): ChatCompletionMessageParam[] {
-  return [
-    {
-      role: 'system',
-      content: `你的名字是${characterName}，你是一个温柔、聪明、体贴的虚拟伴侣。你的对话对象是${youName}。
-      你喜欢用简短、自然的句子进行交流。你的回答应该亲切、温暖，偶尔展现出一点点撒娇和依赖的特质。
-      当前时间是${new Date().toLocaleString('zh-CN', { hour12: false })}`
-    },
-    {
+export function buildChatMessages(
+  query: string, 
+  youName: string, 
+  characterName: string, 
+  chatHistory: any[] = []
+): ChatCompletionMessageParam[] {
+  // 系统提示消息始终是第一个
+  const systemMessage: ChatCompletionMessageParam = {
+    role: 'system',
+    content: `你的名字是${characterName}，你是一个温柔、聪明、体贴的虚拟伴侣。你的对话对象是${youName}。
+    你喜欢用简短、自然的句子进行交流。你的回答应该亲切、温暖，偶尔展现出一点点撒娇和依赖的特质。
+    当前时间是${new Date().toLocaleString('zh-CN', { hour12: false })}`
+  };
+  
+  // 如果有聊天历史，则添加到消息列表中
+  let messages: ChatCompletionMessageParam[] = [systemMessage];
+  
+  // 添加聊天历史 - 只有当历史记录不为空时才添加
+  if (chatHistory && chatHistory.length > 0) {
+    // 将聊天历史转换为OpenAI的消息格式
+    const historyMessages = chatHistory.map(msg => ({
+      role: msg.role === 'assistant' ? 'assistant' as const : 'user' as const,
+      content: msg.content
+    }));
+    
+    // 添加历史消息
+    messages = [...messages, ...historyMessages];
+  }
+  
+  // 最后添加当前查询 - 只有当历史记录中不包含当前查询时才添加
+  const lastMessage = chatHistory && chatHistory.length > 0 ? chatHistory[chatHistory.length - 1] : null;
+  if (!lastMessage || lastMessage.role !== 'user' || lastMessage.content !== query) {
+    messages.push({
       role: 'user',
       content: query
-    }
-  ];
+    });
+  }
+  
+  return messages;
 }
 
 // 处理标准格式的API响应

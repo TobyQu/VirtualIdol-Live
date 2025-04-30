@@ -1,11 +1,11 @@
-import { IconButton } from "./iconButton";
+import { IconButton } from "../ui/icon-button";
 import { Message } from "@/features/messages/messages";
 import { KoeiroParam } from "@/features/constants/koeiroParam";
-import { ChatLog } from "./chatLog";
+import { ChatLog } from "../chat/chat-log-old";
 import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { SettingsSheet } from "./settings-sheet";
+import { SettingsSheet } from "../settings/settings-sheet";
 import { ViewerContext } from "@/features/vrmViewer/viewerContext";
-import { AssistantText } from "./assistantText";
+import { AssistantText } from "../chat/assistant-text";
 import { GlobalConfig } from "@/features/config/configApi";
 
 type Props = {
@@ -121,14 +121,13 @@ export const Menu = ({
           systemPrompt={systemPrompt}
           koeiroParam={koeiroParam}
           assistantMessage={assistantMessage}
-          remoteLoadVrmFile={remoteLoadVrmFile}
           onClickClose={() => setShowSettings(false)}
-          onChangeAiKey={handleAiKeyChange}
+          onChangeAiKey={(key: string) => onChangeAiKey(key)}
           onChangeBackgroundImageUrl={onChangeBackgroundImageUrl}
-          onChangeSystemPrompt={handleChangeSystemPrompt}
+          onChangeSystemPrompt={(prompt: string) => onChangeSystemPrompt(prompt)}
           onChangeChatLog={onChangeChatLog}
-          onChangeKoeiroParam={handleChangeKoeiroParam}
-          onChangeGlobalConfig={() => {}}
+          onChangeKoeiroParam={(param: KoeiroParam) => onChangeKoeiromapParam(param)}
+          onChangeGlobalConfig={(config: GlobalConfig) => {}}
           onClickOpenVrmFile={handleClickOpenVrmFile}
           handleClickResetChatLog={handleClickResetChatLog}
           handleClickResetSystemPrompt={handleClickResetSystemPrompt}

@@ -1,5 +1,5 @@
 import { memo } from "react";
-import VrmViewer from "@/components/vrmViewer";
+import VrmViewer from "./vrm-viewer-core";
 import { GlobalConfig } from "@/features/config/configApi";
 
 interface VRMViewerProps {

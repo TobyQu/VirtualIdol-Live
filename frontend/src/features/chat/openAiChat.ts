@@ -44,6 +44,7 @@ export async function chat(
  * 流式聊天API，返回一个可读流
  * @param message 用户消息
  * @param you_name 用户名称
+ * @param chat_history 聊天历史记录
  * @returns 返回一个包含流式响应的ReadableStream
  */
 // 用于跟踪请求状态的对象
@@ -79,7 +80,8 @@ setInterval(() => {
 
 export async function chatStream(
   message: string,
-  you_name: string = "User"
+  you_name: string = "User",
+  chat_history: any[] = []
 ) {
   // 如果当前有请求正在进行中，拒绝新请求
   if (isRequesting) {
@@ -115,11 +117,15 @@ export async function chatStream(
   const body = {
     query: message,
     you_name: you_name,
-    update_emotion: true // 通知后端更新情绪状态
+    update_emotion: true, // 通知后端更新情绪状态
+    chat_history: chat_history // 传递聊天历史记录
   };
   
   try {
-    console.log("发送流式聊天请求:", body);
+    console.log("发送流式聊天请求:", {
+      ...body,
+      chat_history: `${chat_history.length} 条消息`
+    });
     
     // 获取完整的API URL，确保不带尾部斜杠
     const endpoint = "/api/v1/chat/stream";

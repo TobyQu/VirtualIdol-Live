@@ -25,6 +25,8 @@ import { showSuccess, showError, showInfo } from "@/lib/toast"
 import { Slider } from "@/components/ui/slider"
 import { cn } from "@/lib/utils"
 import { formatFileSize } from "@/lib/utils"
+import { useAssets } from "./useAssets"
+import { useFileInputs } from "./FileInputs"
 
 type AssetsSettingsProps = {
   globalConfig: GlobalConfig
@@ -45,6 +47,24 @@ export function AssetsSettings({
   const [activeTab, setActiveTab] = useState<string>("vrm-models")
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
   const { viewer } = useContext(ViewerContext)
+
+  // 使用资源钩子
+  const { 
+    backgroundModels, 
+    systemVrmModels, 
+    userVrmModels, 
+    handleBackgroundDelete, 
+    handleVrmModelDelete 
+  } = useAssets();
+
+  // 使用文件输入钩子
+  const { 
+    handleClickChangeBgFile, 
+    handleClickOpenVrmFile 
+  } = useFileInputs({
+    onBackgroundUploaded: (data) => {},
+    onVrmModelUploaded: (data) => {}
+  });
 
   const fetchAssets = async () => {
     try {
@@ -117,90 +137,6 @@ export function AssetsSettings({
       ...globalConfig,
       background_url: value
     })
-  }
-
-  // 上传自定义VRM模型
-  const handleClickOpenVrmFile = () => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.vrm'
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (file) {
-        try {
-          // 显示上传中提示
-          showInfo("正在处理VRM模型，请稍候...")
-          
-          // 同时保存到前端资产目录和后端
-          try {
-            // 将文件保存到前端资产目录
-            const assetUrl = await saveAsset(file, 'vrm');
-            console.log("前端VRM资产URL:", assetUrl);
-            
-            // 同时上传到后端（为了保持兼容）
-            const formData = new FormData();
-            formData.append('vrm', file);
-            await uploadVrmModel(formData);
-            
-            // 刷新资产列表
-            const assetData = await fetchPublicAssets();
-            setAssets(assetData);
-            
-            // 显示成功消息
-            showSuccess("VRM模型上传成功，可从列表中选择应用");
-          } catch (error) {
-            console.error("上传VRM模型失败:", error);
-            showError(`上传VRM模型失败: ${error}`);
-          }
-        } catch (error) {
-          console.error("处理VRM模型时出错:", error);
-          showError(`处理VRM模型时出错: ${error}`);
-        }
-      }
-    }
-    input.click()
-  }
-
-  // 上传自定义背景图片
-  const handleClickOpenBackgroundFile = () => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = 'image/*'
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (file) {
-        try {
-          // 显示上传中提示
-          showInfo("正在处理图片，请稍候...")
-          
-          // 同时保存到前端资产目录和后端
-          try {
-            // 将文件保存到前端资产目录
-            const assetUrl = await saveAsset(file, 'backgrounds');
-            console.log("前端资产URL:", assetUrl);
-            
-            // 同时上传到后端（为了保持兼容）
-            const formData = new FormData();
-            formData.append('image', file);
-            await uploadBackground(formData);
-            
-            // 刷新资产列表
-            const assetData = await fetchPublicAssets();
-            setAssets(assetData);
-            
-            // 显示成功消息
-            showSuccess("背景图片上传成功，可从列表中选择应用");
-          } catch (error) {
-            console.error("上传背景图片失败:", error);
-            showError(`上传背景图片失败: ${error}`);
-          }
-        } catch (error) {
-          console.error("处理图片时出错:", error)
-          showError(`处理图片时出错: ${error}`)
-        }
-      }
-    }
-    input.click()
   }
 
   // 检查文件是否可以删除 (不是当前使用的文件，且不是default开头的文件)
@@ -503,7 +439,7 @@ export function AssetsSettings({
                 <Button
                   type="button"
                   variant="secondary"
-                  onClick={handleClickOpenBackgroundFile}
+                  onClick={handleClickChangeBgFile}
                   className="w-full"
                 >
                   <Upload className="mr-2 h-4 w-4" /> 上传自定义背景图片

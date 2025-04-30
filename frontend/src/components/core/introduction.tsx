@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Link } from "./link";
+import { Link } from "../ui/link";
 
 type Props = {
   openAiKey: string;

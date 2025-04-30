@@ -32,7 +32,7 @@
     "@types/formidable": "^3.4.5",
     "@types/js-priority-queue": "0.0.6",
     "abortcontroller-polyfill": "^1.7.8",
-    "ai": "^4.3.10",
+    "ai": "^4.3.11",
     "axios": "^1.8.4",
     "caniuse-lite": "^1.0.30001712",
     "class-variance-authority": "^0.7.1",
@@ -61,6 +61,7 @@
     "tailwindcss-animate": "^1.0.7",
     "three": "^0.151.3",
     "typescript": "5.0.2",
+    "uuid": "^11.1.0",
     "zhipu-ai-provider": "^0.1.1",
     "zod": "^3.24.2"
   },

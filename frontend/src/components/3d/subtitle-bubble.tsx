@@ -31,6 +31,9 @@ const SubtitleBubbleBase: React.FC<SubtitleBubbleProps> = ({
   const chunkTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
   
+  // 跟踪上一次处理的文本内容
+  const lastTextRef = useRef<string>("");
+  
   // 清理所有定时器
   const clearAllTimers = useCallback(() => {
     if (typingTimerRef.current) {
@@ -97,6 +100,15 @@ const SubtitleBubbleBase: React.FC<SubtitleBubbleProps> = ({
 
   // 当文本变化时，重新分割并重置状态
   useEffect(() => {
+    // 检查是否与上一次处理的文本相同，如果相同则跳过处理
+    if (text === lastTextRef.current && text !== "") {
+      console.log("[SubtitleBubble] 跳过重复的文本处理:", text);
+      return;
+    }
+    
+    // 更新上次处理的文本引用
+    lastTextRef.current = text;
+    
     // 日志
     console.log("[SubtitleBubble] 收到新文本:", text);
     

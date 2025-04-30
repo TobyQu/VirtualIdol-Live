@@ -4,7 +4,8 @@
     "character_name": "芙琳娜",
     "yourName": "老公",
     "vrmModel": "/assets/vrm/Flinna.vrm",
-    "cameraDistance": 9.4
+    "cameraDistance": 9.4,
+    "vrmModelType": "system"
   },
   "languageModelConfig": {
     "openai": {

@@ -9,60 +9,7 @@ body {
   background-repeat: no-repeat;
 }
 
-/* 添加独立窗口中Sheet组件的样式 */
-@media (max-width: 640px) {
-  [data-fullwidth="true"] {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-}
-
-/* 对于/chat路径下的样式特殊处理 */
-.detached-chat-window .sheet-content {
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-/* 确保分离窗口中的设置滚动按钮样式正确 */
-.detached-chat-window .sticky {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background-color: white;
-}
-
-/* 修复分离窗口中的滚动按钮样式 */
-.detached-window .scroll-hidden {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.detached-window .scroll-hidden::-webkit-scrollbar {
-  display: none;
-}
-
-/* 修复分离窗口中的Tab布局 */
-.detached-chat-window .flex-1.overflow-auto.p-0 {
-  height: calc(100vh - 150px); /* 调整高度以适应Header */
-  overflow-y: auto;
-}
-
-/* 确保按钮在适当位置显示 */
-.detached-chat-window button[class*="absolute -left-1"],
-.detached-chat-window button[class*="absolute -right-1"] {
-  z-index: 30 !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-/* 滚动区域指示器在分离窗口和小屏幕上始终显示 */
-.detached-chat-window [class*="bg-gradient-to-r from-background"],
-.detached-chat-window [class*="bg-gradient-to-l from-background"] {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-/* 强化滚动指示器的视觉效果 */
+/* 滚动区域指示器样式 */
 [class*="bg-gradient-to-r from-background"] .h-5.w-5,
 [class*="bg-gradient-to-l from-background"] .h-5.w-5 {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
@@ -74,78 +21,53 @@ body {
   transform: scale(1.2);
 }
 
-/* 分离窗口中设置面板的特殊样式 */
-.detached-window-card {
-  background-color: white;
-  border-radius: 0 !important;
-}
-
-.detached-tabs-list {
+/* 标签列表样式 */
+[role="tabslist"] {
   min-width: 100%;
   scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding-left: 8px !important;
   padding-right: 8px !important;
 }
 
-/* 强制显示滚动按钮 */
-.detached-chat-window button.opacity-0 {
-  opacity: 1 !important;
-  pointer-events: auto !important;
+[role="tabslist"]::-webkit-scrollbar {
+  display: none;
 }
 
-/* 固定比例窗口样式 */
-html.fixed-ratio-window {
-  overflow: hidden;
-}
-
-html.fixed-ratio-window body {
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
-/* 宽屏时居中内容区域 */
-html.fixed-ratio-window[data-ratio="wide"] body {
+/* 标签页内容区域样式 */
+[data-state="active"][role="tabpanel"] {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  height: calc(100% - 48px); /* 减去标签栏高度 */
+}
+
+/* 标签滚动按钮样式 */
+.scroll-button {
+  position: absolute;
+  z-index: 20;
   height: 100%;
-}
-
-html.fixed-ratio-window[data-ratio="wide"] .detached-chat-window {
-  width: var(--content-width);
-  height: var(--content-height);
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-}
-
-/* 高屏时居中内容区域 */
-html.fixed-ratio-window[data-ratio="tall"] body {
+  padding: 0 0.5rem;
   display: flex;
-  justify-content: center;
   align-items: center;
-  width: 100%;
-  height: 100%;
+  justify-content: center;
+  background: linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.5) 100%);
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
 }
 
-html.fixed-ratio-window[data-ratio="tall"] .detached-chat-window {
-  width: var(--content-width);
-  height: var(--content-height);
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+.scroll-button-left {
+  left: 0;
 }
 
-/* 旧的固定尺寸样式，保留但不使用 */
-html.fixed-size-window {
-  overflow: hidden;
-  width: 390px;
-  height: 844px;
-}
-
-html.fixed-size-window body {
-  width: 390px;
-  height: 844px;
-  overflow: hidden;
-  position: fixed;
+.scroll-button-right {
+  right: 0;
 }
 
 @layer components {
@@ -395,4 +317,57 @@ input[type="radio"] {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+}
+
+/* 修复标签触发器样式 */
+[role="tab"] {
+  position: relative;
+  display: inline-flex;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  transition-property: color, background-color, border-color;
+  transition-duration: 150ms;
+}
+
+/* 确保标签内容区域撑满空间 */
+[role="tabpanel"] {
+  height: 100%;
+  display: none;
+  overflow: hidden;
+}
+
+[role="tabpanel"][data-state="active"] {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 聊天内容区域样式 */
+.chat-scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.chat-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scroll-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 2px solid transparent;
+}
+
+/* 特定修复聊天标签页 */
+[data-value="chat"][role="tabpanel"] {
+  max-height: calc(100% - 48px);
+  display: flex;
+  flex-direction: column;
 }

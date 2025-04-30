@@ -3,7 +3,7 @@ import type { AppProps } from "next/app";
 import "@charcoal-ui/icons";
 import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
-import BackendStatus from '../components/BackendStatus';
+import BackendStatus from '../components/core/backend-status';
 
 
 // 在服务器端渲染时抑制 useLayoutEffect 警告

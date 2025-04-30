@@ -1,9 +1,7 @@
 import { useContext, useCallback, useEffect, useState, useRef } from "react";
-import { ViewerContext } from "../features/vrmViewer/viewerContext";
+import { ViewerContext } from "@/features/vrmViewer/viewerContext";
 import { buildVrmModelUrl, generateMediaUrl } from "@/features/media/mediaApi";
 import { GlobalConfig, getConfig, initialFormData } from "@/features/config/configApi";
-import { buildUrl } from "@/utils/buildUrl";
-import { Viewer } from "@/features/vrmViewer/viewer";
 
 type LoadingStage = {
   id: string;
@@ -139,7 +137,7 @@ export default function VrmViewer({
       if (!canvas) return;
       
       viewer.setup(canvas);
-      getConfig().then(data => {
+      getConfig().then((data: GlobalConfig | null) => {
         // 使用配置数据，如果为空则使用默认值
         const config = data || initialFormData;
         const vrmModel = config.characterConfig?.vrmModel || initialFormData.characterConfig.vrmModel;
@@ -174,7 +172,7 @@ export default function VrmViewer({
             viewer.loadVrm(url);
           }
         });
-      }).catch(error => {
+      }).catch((error: Error) => {
         console.error("Failed to load config:", error);
         const url = buildVrmModelUrl(
           initialFormData.characterConfig.vrmModel,

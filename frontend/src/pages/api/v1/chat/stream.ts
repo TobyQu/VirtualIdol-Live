@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   
   try {
     // 提取请求参数
-    const { query, you_name, user_id, role_id } = extractChatParams(req);
+    const { query, you_name, user_id, role_id, chat_history } = extractChatParams(req);
     
     // 参数验证
     if (!query || !you_name) {
@@ -50,11 +50,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
     
+    // 记录聊天历史信息
+    console.log(`处理聊天请求 - 用户: ${you_name}, 查询: ${query.substring(0, 50)}${query.length > 50 ? '...' : ''}`);
+    console.log(`聊天历史长度: ${chat_history ? chat_history.length : 0}`);
+    
     // 构建聊天消息
     const aiMessages = buildChatMessages(
       query, 
       you_name, 
-      config.characterConfig.character_name
+      config.characterConfig.character_name,
+      chat_history
     );
     
     // 根据当前配置选择不同的模型

@@ -15,6 +15,8 @@ export class ChatService {
   ) => void;
   private setSubtitle: (text: string) => void;
   private isProcessingChat = false;
+  // 跟踪最后处理的TTS文本段，用于去重
+  private lastProcessedSegments: Set<string> = new Set();
 
   constructor(
     setChatProcessing: (isProcessing: boolean) => void,
@@ -56,6 +58,9 @@ export class ChatService {
     console.log("Chat processing state changing to true");
     this.setChatProcessing(true);
     this.isProcessingChat = true;
+    
+    // 清空最近处理过的TTS文本记录，因为开始新的聊天
+    this.lastProcessedSegments.clear();
 
     // 获取用户名称
     const yourName = globalConfig?.characterConfig?.yourName || "User";
@@ -76,7 +81,10 @@ export class ChatService {
       try {
         // 使用流式API获取响应
         console.log("开始流式聊天请求");
-        stream = await chatStream(content, yourName);
+        // 将当前消息列表（用户消息已添加）传递给chatStream
+        // 但需要去掉最后一条消息，因为它已经在message参数中包含了
+        const historyMessages = messageLog.slice(0, -1);
+        stream = await chatStream(content, yourName, historyMessages);
         
         if (!stream) {
           throw new Error("无法获取聊天流");
@@ -103,6 +111,9 @@ export class ChatService {
       let currentEmotion = "neutral";
       let accumulatedText = "";
       
+      // 更新消息记录跟踪
+      console.log("聊天记录初始状态:", JSON.stringify(messageLog.map(msg => ({ role: msg.role, len: msg.content.length }))));
+      
       // 获取koeiroParam，默认为空对象
       const koeiroParam = (globalConfig as any).koeiroParam || {};
       
@@ -119,13 +130,31 @@ export class ChatService {
       const processTTSSegment = async (segment: string, emotion: string) => {
         if (!segment || segment.trim() === '') return;
         
-        console.log(`处理TTS片段: "${segment}"，情绪: ${emotion}`);
+        // 去重检查 - 如果这个片段最近处理过，跳过它
+        const safeSegment = String(segment); // 确保segment一定是字符串
+        if (this.lastProcessedSegments.has(safeSegment)) {
+          console.log(`跳过重复的TTS片段: "${safeSegment}"`);
+          return;
+        }
+        
+        // 添加到处理过的片段集合中
+        this.lastProcessedSegments.add(safeSegment);
+        // 限制集合大小，避免内存泄漏
+        if (this.lastProcessedSegments.size > 100) {
+          // 移除最早添加的项（使用迭代器移除第一个元素）
+          const firstItem = this.lastProcessedSegments.values().next().value;
+          if (firstItem !== undefined) {
+            this.lastProcessedSegments.delete(firstItem);
+          }
+        }
+        
+        console.log(`处理TTS片段: "${safeSegment}"，情绪: ${emotion}`);
         
         // 等待前一个语音播放完成
         await speakCompletePromise;
         
         // 创建片段的screenplay
-        const segmentTalks = textsToScreenplay([segment], koeiroParam, emotion);
+        const segmentTalks = textsToScreenplay([safeSegment], koeiroParam, emotion);
         if (segmentTalks && segmentTalks.length > 0) {
           segmentTalks[0].talk.emotion = emotion;
           
@@ -239,6 +268,45 @@ export class ChatService {
         
         // 处理累积的文本，看是否达到了处理条件
         processAccumulatedText();
+        
+        // 实时更新聊天记录中的助手消息
+        // 每次接收到新的文本块时，更新聊天记录中最后一条助手消息
+        // 或者添加一条新的助手消息（如果尚不存在）
+        
+        // 使用类型断言确保类型正确
+        const characterName = (globalConfig?.characterConfig?.character_name || "AI") as string;
+        
+        // 创建新的消息数组副本，避免修改原数组
+        const updatedMessageLog = [...messageLog];
+        
+        // 检查是否已经有助手消息在当前对话中
+        let hasAssistantMessage = false;
+        
+        // 找出最后一条消息及其索引
+        const lastMessageIndex = updatedMessageLog.length - 1;
+        const lastMessage = lastMessageIndex >= 0 ? updatedMessageLog[lastMessageIndex] : null;
+        
+        // 如果最后一条消息是用户消息，则需要添加一条助手消息
+        // 如果最后一条消息是助手消息，则更新它
+        if (lastMessage && lastMessage.role === "assistant") {
+          // 最后一条消息已经是助手消息，更新它
+          hasAssistantMessage = true;
+          updatedMessageLog[lastMessageIndex] = {
+            ...lastMessage,
+            content: fullResponse
+          };
+          this.updateChatLog(updatedMessageLog);
+        } else {
+          // 需要添加新的助手消息
+          this.updateChatLog([
+            ...updatedMessageLog,
+            { 
+              role: "assistant", 
+              content: fullResponse, 
+              user_name: characterName
+            }
+          ]);
+        }
       }
       
       // 处理最后剩余的文本
@@ -249,16 +317,7 @@ export class ChatService {
       // 等待所有语音播放完成
       await speakCompletePromise;
       
-      // 流式响应结束后，将完整响应添加到聊天记录
-      const messageLogAssistant: Message[] = [
-        ...messageLog,
-        { 
-          role: "assistant", 
-          content: fullResponse, 
-          user_name: globalConfig?.characterConfig?.character_name || "AI"
-        },
-      ];
-      this.updateChatLog(messageLogAssistant);
+      // 流式响应已经实时更新聊天记录，这里不需要再次添加完整响应
       console.log("流式聊天完成，最终回复:", fullResponse);
       
     } catch (error) {

@@ -88,13 +88,19 @@ export function ChatList({ messages, isLoading = false }: ChatListProps) {
   }
 
   // 确保我们有一个AI消息来显示加载状态
-  let lastAIMessageIndex = messages.length - 1;
+  let lastAIMessageIndex = -1; // 初始化为-1表示未找到
+  
+  // 寻找最后一个助手消息的索引
   for (let i = messages.length - 1; i >= 0; i--) {
     if (messages[i].role === "assistant") {
       lastAIMessageIndex = i;
       break;
     }
   }
+  
+  // 如果最后一条消息是用户消息且正在加载，应该显示未来将添加的助手消息的加载状态
+  const lastMessageIsUser = messages.length > 0 && messages[messages.length - 1].role === "user";
+  const shouldShowLoadingIndicator = isLoading && (lastAIMessageIndex === -1 || lastMessageIsUser);
 
   return (
     <div 
@@ -112,15 +118,15 @@ export function ChatList({ messages, isLoading = false }: ChatListProps) {
         <div className="w-full max-w-3xl mx-auto px-4 space-y-6">
           {messages.map((message, index) => (
             <ChatMessage 
-              key={index} 
+              key={`${index}-${message.role}-${message.content.length}`}
               message={message} 
               isLast={index === messages.length - 1} 
-              isLoading={isLoading && (index === lastAIMessageIndex)}
+              isLoading={isLoading && index === lastAIMessageIndex && !lastMessageIsUser}
             />
           ))}
           
-          {/* 固定的加载指示器 */}
-          {isLoading && (
+          {/* 固定的加载指示器 - 当最后一条消息是用户消息且正在加载时显示 */}
+          {shouldShowLoadingIndicator && (
             <div className="flex justify-start mb-4">
               <div className="bg-accent/60 border border-accent text-accent-foreground rounded-lg rounded-tl-none px-4 py-3">
                 <div className="flex items-center gap-2">
